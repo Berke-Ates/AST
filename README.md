@@ -23,19 +23,102 @@ To start using MLIRsmith, follow these steps:
 
 1. Clone the repository: `git clone --recurse-submodules --shallow-submodules 
 https://github.com/Berke-Ates/AST`
-2. Build the project by following the instructions in the [Building](#building) 
-section.
+2. Install the requirements by following the instructions in the 
+[Requirements](#requirements) section.
 3. Register the desired dialects using the provided interface.
-4. Run MLIRsmith with the appropriate configuration options to generate random 
-MLIR code.
+4. Build the project by following the instructions in the [Building](#building) 
+section.
+5. Run MLIRsmith with the appropriate configuration options to generate random 
+MLIR code. 
 
 For more details on using MLIRsmith and its various options, please refer to the
  [Usage](#usage) section.
 
+## Requirements
+MLIRsmith relies on other projects that are incorporated as submodules. 
+To ensure a seamless experience, follow these steps for each project if you 
+haven't already installed them. First, make sure to obtain the submodules on 
+your local machine by executing the command:
+```sh
+git submodule update --init --recursive
+```
+This will initialize and update all necessary submodules and their nested 
+submodules in a single step.
+
+### MLIR
+Follow these steps to build MLIR:
+```sh
+cd llvm-project
+mkdir build && cd build
+
+cmake -G Ninja ../llvm \
+  -DLLVM_ENABLE_PROJECTS="mlir" \
+  -DLLVM_TARGETS_TO_BUILD="host" \
+  -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DLLVM_ENABLE_LLD=ON \
+  -DLLVM_INSTALL_UTILS=ON
+
+ninja
+```
+
+Note: Depending on your machine this may take a while.
+
+### DaCe (Optional)
+Install DaCe with the following commands:
+```sh
+cd dace
+pip install --editable .
+pip install mxnet-mkl==1.6.0 numpy==1.23.1
+```
+
+### MLIR-DaCe (Optional)
+If the MLIR commits of this project and MLIR-DaCe differ, you may need to build
+the MLIR submodule of MLIR-DaCe:
+
+```sh
+cd mlir-dace/llvm-project
+mkdir build && cd build
+
+cmake -G Ninja ../llvm \
+  -DLLVM_ENABLE_PROJECTS="mlir" \
+  -DLLVM_TARGETS_TO_BUILD="host" \
+  -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DLLVM_ENABLE_LLD=ON \
+  -DLLVM_INSTALL_UTILS=ON
+
+ninja
+```
+
+To build MLIR-DaCe run the following commands:
+```sh
+cd mlir-dace
+mkdir build && cd build
+
+RUN cmake -G Ninja .. \
+  -DMLIR_DIR=<Path to llvm-project>/build/lib/cmake/mlir \
+  -DLLVM_EXTERNAL_LIT=<Path to llvm-project>/build/bin/llvm-lit \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Release
+
+ninja
+```
+
+Note: Replace `<Path to llvm-project>` by the absolute path to the 
+`llvm-project` folder of this project (if applicable) or of the MLIR-DaCe 
+project.
+
 ## Building
+
 Please follow these steps to build MLIRsmith:
 
-1. Ensure you have the required dependencies installed: LLVM, MLIR, and CMake.
+1. Ensure you have the required dependencies installed: MLIR, CMake, and Ninja.
 2. Create a build directory: `mkdir build && cd build`
 3. Configure the project with CMake: `cmake -G Ninja ..`
 4. Build the project: `ninja`
