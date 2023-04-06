@@ -1,0 +1,9 @@
+[submodule "llvm-project"]
+	path = llvm-project
+	url = https://github.com/llvm/llvm-project
+[submodule "dace"]
+	path = dace
+	url = https://github.com/spcl/dace
+[submodule "mlir-dace"]
+	path = mlir-dace
+	url = https://github.com/spcl/mlir-dace
