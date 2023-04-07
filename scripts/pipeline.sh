@@ -29,10 +29,13 @@ check_tool() {
 
 check_tool clang
 check_tool clang++
+check_tool clang-10   # libomp compatible version
+check_tool clang++-10 # libomp compatible version
 check_tool mlir-opt
 check_tool sdfg-opt
 check_tool sdfg-translate
 check_tool python3
+check_tool llc
 
 # Create output directory
 if [ ! -d "$output_dir" ]; then
@@ -49,18 +52,19 @@ scripts_dir=$(dirname "$0")
 # Flags for optimizations
 flags="-fPIC -march=native"
 opt_lvl_cc="-O3" # Optimization level for the control-centric optimizations
-opt_lvl_dc="3"   # Optimization level for the data-centric optimizations
+opt_lvl_dc="3"   # Optimization level for the data-centric optimizations (no -O)
 
 # Dace Settings
-DACE_compiler_cpu_executable="$(which clang++)"
+DACE_compiler_cpu_executable="$(which clang++-10)"
 export DACE_compiler_cpu_executable
-CC=$(which clang)
+CC=$(which clang-10)
 export CC
-CXX=$(which clang++)
+CXX=$(which clang++-10)
 export CXX
 export DACE_compiler_cpu_openmp_sections=0
 export DACE_instrumentation_report_each_invocation=0
 export DACE_compiler_cpu_args="$flags $opt_lvl_cc"
+# export DACE_debugprint=verbose # for debugging
 export PYTHONWARNINGS="ignore"
 
 ##===----------------------------------------------------------------------===##
@@ -70,18 +74,31 @@ export PYTHONWARNINGS="ignore"
 # Optimizing with MLIR
 mlir-opt --cse --inline "$mlir_file" >"$output_dir"/"${input_name}"_opt.mlir
 
-# TODO: Lower to LLVM Dialect
+# Lower to LLVM dialect
+mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
+  --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts \
+  "$output_dir"/"${input_name}"_opt.mlir >"$output_dir"/"${input_name}"_ll.mlir
 
-# TODO: Translate to LLVM IR
+# Translate
+mlir-translate --mlir-to-llvmir "$output_dir"/"${input_name}"_ll.mlir \
+  >"$output_dir"/"${input_name}".ll
 
-# TODO: Compile with LLC & Clang
+# Compile
+llc $opt_lvl_cc --relocation-model=pic "$output_dir"/"${input_name}".ll \
+  -o "$output_dir"/"${input_name}".s
+
+# Assemble
+# shellcheck disable=SC2086
+clang $opt_lvl_cc $flags "$output_dir"/"${input_name}".s \
+  -o "$output_dir"/"${input_name}".out -lm
 
 ##===----------------------------------------------------------------------===##
 ## DCIR Pipeline
 ##===----------------------------------------------------------------------===##
 
 # Converting to SDFG Dialect
-sdfg-opt --convert-to-sdfg "$mlir_file" >"$output_dir"/"${input_name}"_sdfg.mlir
+sdfg-opt --convert-to-sdfg "$output_dir"/"${input_name}"_opt.mlir \
+  >"$output_dir"/"${input_name}"_sdfg.mlir
 
 # Translating to SDFG
 sdfg-translate --mlir-to-sdfg "$output_dir"/"${input_name}"_sdfg.mlir \
