@@ -32,10 +32,12 @@ check_tool clang++
 check_tool clang-10   # libomp compatible version
 check_tool clang++-10 # libomp compatible version
 check_tool mlir-opt
+check_tool mlir-translate
 check_tool sdfg-opt
 check_tool sdfg-translate
 check_tool python3
 check_tool llc
+check_tool objdump
 
 # Create output directory
 if [ ! -d "$output_dir" ]; then
@@ -64,6 +66,7 @@ export CXX
 export DACE_compiler_cpu_openmp_sections=0
 export DACE_instrumentation_report_each_invocation=0
 export DACE_compiler_cpu_args="$flags $opt_lvl_cc"
+export DACE_default_build_folder="$output_dir"/.dacecache
 # export DACE_debugprint=verbose # for debugging
 export PYTHONWARNINGS="ignore"
 
@@ -107,3 +110,8 @@ sdfg-translate --mlir-to-sdfg "$output_dir"/"${input_name}"_sdfg.mlir \
 # Optimizing data-centrically with DaCe
 python3 "$scripts_dir"/compile_sdfg.py "$output_dir"/"$input_name".sdfg \
   "$output_dir"/"${input_name}"_opt.sdfg $opt_lvl_dc T
+
+# Disassembling
+# NOTE: We assume that the SDFG is called sdfg_0 (should be the case with mlir-dace)
+obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
+objdump -d "$obj_file" >"$output_dir"/"${input_name}"_sdfg.s
