@@ -1,0 +1,42 @@
+name: Clang Checks
+
+on:   
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format
+
+    - name: Check format
+      run: .github/workflows/check-format.sh
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-tidy
+
+    - name: Check tidy
+      run: .github/workflows/check-tidy.sh
+        
+
+
+      
