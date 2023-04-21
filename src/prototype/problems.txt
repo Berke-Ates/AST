@@ -1,0 +1,12 @@
+Loop termination
+Fix: Timing restriction on execution
+
+For loop integer vs. index case
+Fix: index_case bool in class to determine which one to use
+
+Arith.constant cannot be modeled as it does not follow the usual expression scheme
+Note: Probably good to keep this in mind for MLIR implementation, here we can just leave it out?
+Fix:
+
+Syntax for multiple init args in ForLoop?
+Fix:
