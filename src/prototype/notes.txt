@@ -4,5 +4,8 @@ Examples:
 scf.yield %x : i32
 arith.addi %x, %y : i32
 
+- Attributes not implemented
 
-- Attributes not implemented yet
+- Work needed for correct indentation
+
+- Memref inherits Type and should therefore be used like a type
