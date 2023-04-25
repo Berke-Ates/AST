@@ -17,21 +17,21 @@ SCF Primitives
 [x] scf.yield
 
 Memrefs:
-[-] memref.load
-[-] memref.store
-[-] memref.alloc
-[-] memref.alloca
-[-] memref.dealloc
-[-] memref.cast
+[x] memref.load
+[x] memref.store
+[x] memref.alloc
+[x] memref.alloca
+[x] memref.dealloc
+[x] memref.cast
 
 Types:
 [x] i1, i8, i32, i64
 [x] f32, f64
 [x] index
-[-] unmapped memrefs: memref<i32>, memref<5x3xf64>, memref<?x?xindex>
+[x] unmapped memrefs: memref<i32>, memref<5x3xf64>, memref<?x?xindex>
 
 Untested Types:
 [x] unsigned/signed integers: ui1, si8, etc
 [x] arbitrary precision integers: i2, i5, i7, etc
 [x] other precision floats: f16, f80, f128
-[-] Unknown rank memrefs: memref<*xf64>
+[x] Unknown rank memrefs: memref<*xf64>

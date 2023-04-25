@@ -11,6 +11,25 @@ class Type():
     def __init__(self, name: str):
         self.name = name
 
+# If the rank is unknown, leave the dimension list empty
+# If the dimension is dynamic, use '-1' in the dimension list
+class TypeMemref(Type):
+    def __init__(self, dimension_list: List[int], type: Type):
+        self.dimension_list = dimension_list
+        self.type = type
+
+        # Case for unknown rank
+        if(len(dimension_list) == 0):
+            return f"memref<*x{type.name}>"
+        
+        str_dim = 'x'.join(f'{"?" if i == -1 else i}' for i in dimension_list)
+
+        self.name = f"memref<{str_dim}x{type.name}>"
+
+
+    def parse_dict(self):
+        return {"type": "typememref", "name": self.name, "dimension_list": self.dimension_list, "type": self.type}
+
 class Module():
     def __init__(self):
         # need to be initialized after generation
@@ -19,7 +38,7 @@ class Module():
         return {"type": "module", "statements": self.statements}
 
 class Expression():
-    def __init__(self, primitive: str, args, return_type : List[Type]):
+    def __init__(self, primitive: str, args: List, return_type : List[Type]):
         self.primitive = primitive
         self.args = args
         self.return_type = return_type
@@ -33,8 +52,7 @@ class Variable():
         self.type = v_type
 
     def parse_dict(self, expr : Expression):
-        if(expr.return_type == [self.type]):
-            return {"type": "assignment", "variable": self.name, "value": expr}
+        return {"type": "assignment", "variable": self.name, "value": expr}
     
 class Function():
     def __init__(self, name: str, params: List[Variable], return_type: List[Type]):
@@ -119,6 +137,50 @@ class WhileDo():
         return {"type": "whiledo", "condition" : self.condition, "assignment_list": self.assignment_list, "return_type": self.return_type,
                 "statements_before": self.statements_before, "statements_after": self.statements_after}
     
+class MemrefLoad(Expression):
+    def __init__(self, memref: Variable, indices):
+        self.memref = memref
+        self.indices = indices # list of constants and variables
+        self.mem_type = type
+
+    def parse_dict(self):
+        return {"type": "memrefload", "memref": self.memref, "indices": self.indices}
+    
+class MemrefStore(Expression):
+    def __init__(self, value: Variable, memref: Variable, indices):
+        self.value = value
+        self.memref = memref
+        self.indices = indices # list of constants and variables
+
+    def parse_dict(self):
+        return {"type": "memrefstore", "value": self.value, "memref": self.memref, "indices": self.indices}
+    
+class MemrefAlloc(Expression):
+    def __init__(self, arg_list: List, type: TypeMemref):
+        self.arg_list = arg_list
+        self.mem_type = type
+
+    def parse_dict(self):
+        return {"type": "memrefalloc", "arg_list": self.arg_list, "mem_type": self.mem_type}
+    
+class MemrefAlloca(Expression):
+    def __init__(self, arg_list: List, type: TypeMemref):
+        self.arg_list = arg_list
+        self.mem_type = type
+
+    def parse_dict(self):
+        return {"type": "memrefalloca", "arg_list": self.arg_list, "mem_type": self.mem_type}
+    
+class MemrefCast(Expression):
+    def __init__(self, source: Variable, from_type: TypeMemref, to_type: TypeMemref):
+        self.source = source
+        self.from_type = from_type
+        self.to_type = to_type
+
+    def parse_dict(self):
+        return {"type": "memrefcast", "source": self.source, "from_type": self.from_type, "to_type": self.to_type}
+    
+
 class MLIRSmith():
 
     # Contains global variables in the module
@@ -144,7 +206,7 @@ class MLIRSmith():
         return
     
     """
-    Generates code in MLIR.
+    Generates example code in MLIR.
     self -- instance class data
     """
     def generate_code(self):
@@ -158,6 +220,11 @@ class MLIRSmith():
         v1 = Variable("x", self.t_i32)
         v2 = Variable("y", self.t_i32)
         v3 = Variable("z", self.t_i32)
+
+
+        # Define a constant
+        const1 = Expression("arith.constant", [42], [self.t_i32])
+        module.statements.append(v2.parse_dict(const1))
 
         # Define an expression
         # TODO: Generator should pull primitives and their definitions (arguments, return type etc.) from a file or something
@@ -243,6 +310,50 @@ class MLIRSmith():
 
         module.statements.append(w1.parse_dict())
 
+
+        # =============== Defining Memref operations ===============
+
+        # Defining memref types
+        mr1 = TypeMemref([8, -1], self.t_f32)
+
+        # ***** Allocating some array (memref.alloc) *****
+        A = Variable("A", mr1)
+        maA = MemrefAlloc([8], mr1)
+
+        module.statements.append(A.parse_dict(maA))
+
+        # ***** Allocating some array on the stack (memref.alloca) *****
+        B = Variable("B", mr1)
+        maB = MemrefAlloca([16], mr1)
+
+        module.statements.append(B.parse_dict(maB))
+
+        # ***** Deallocating some array *****
+        # Note: Since dealloc is formatted as an expression, it is used like one
+        mdB = Expression("memref.dealloc", [B], [mr1])
+
+        module.statements.append(mdB.parse_dict())
+
+        # ***** Loading some value from A *****
+        loc1 = Variable("1", self.t_i32)
+        loc2 = Variable("2", self.t_i32)
+        loc12 = Variable("12", self.t_f32)
+
+        memload = MemrefLoad(A, [loc1, loc2])
+
+        module.statements.append(loc12.parse_dict(memload))
+
+        # ***** Storing some value to A *****
+        v4 = Variable("100", self.t_f32)
+
+        module.statements.append(MemrefStore(v4, A, [loc1, 7]).parse_dict())
+
+        # ***** Casting values *****
+        mr2 = TypeMemref([-1, -1], self.t_f32)
+        C = Variable("C", mr2)
+
+        module.statements.append(C.parse_dict(MemrefCast(A, mr1, mr2)))
+
         # =============== Output as MLIR ===============
         # Parse to mlir from dictionary
         string = self.parse_to_mlir(module.parse_dict())
@@ -271,7 +382,9 @@ class MLIRSmith():
                     f"return {', '.join(f'%{r.name}' for r in id['return_vars'])} : {', '.join(f'{r.name}' for r in id['return_type'])} {nl} }}"
             
             case "expression":
-                return f"{id['primitive']} {', '.join([f'%{p.name}' for p in id['args']])} : {', '.join(f'{r.name}' for r in id['return_type'])}"
+                args = ', '.join(f"{i if isinstance(i, (int, float)) else '%'+i.name}" for i in id['args'])
+
+                return f"{id['primitive']} {args} : {', '.join(f'{r.name}' for r in id['return_type'])}"
 
             case "forloop":
                 ssa_vars = id['ssa_vars']
@@ -320,6 +433,44 @@ class MLIRSmith():
                     self.parse_to_mlir(id["condition"].parse_dict()) + f"{nl} }} do {{ {nl}" + \
                     f"{nl.join([self.parse_to_mlir(s) for s in id['statements_after']])}" + \
                     f"{nl} }}"
+            
+            case "memreftype":
+                dim_list = id['dimension_list']
+                type = id['type']
+
+                # Case for unknown rank
+                if(len(dim_list) == 0):
+                    return f"memref<*x{type.name}>"
+                
+                str_dim = 'x'.join(f'%{"?" if i == -1 else i}' for i in dim_list)
+
+                return f"memref<{str_dim}x{type.name}>"
+
+            case "memrefload":
+                memref = id['memref'].name
+                indices = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in id['indices'])
+
+                return f"memref.load %{memref}[{indices}] : {id['memref'].type.name}"
+            
+            case "memrefstore":
+                value = id['value'].name
+                memref = id['memref'].name
+                indices = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in id['indices'])
+
+                return f"memref.store %{value}, %{memref}[{indices}] : {id['memref'].type.name}"
+            
+            case "memrefalloc":
+                arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in id['arg_list'])
+                
+                return f"memref.alloc({arg_list}) : {id['mem_type'].name}"
+            
+            case "memrefalloca":
+                arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in id['arg_list'])
+                
+                return f"memref.alloca({arg_list}) : {id['mem_type'].name}"
+            
+            case "memrefcast":
+                return f"memref.cast %{id['source'].name} : {id['from_type'].name} to {id['to_type'].name}"
 
             case _:
                 return "\n"
