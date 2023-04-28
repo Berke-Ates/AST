@@ -5,11 +5,17 @@
 
 
 from typing import List
+import random
 
 
 class Type():
     def __init__(self, name: str):
         self.name = name
+
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, Type):
+            return self.name == __value.name
+        return False
 
 # If the rank is unknown, leave the dimension list empty
 # If the dimension is dynamic, use '-1' in the dimension list
@@ -189,17 +195,7 @@ class MLIRSmith():
 
 
     # Define types for usage
-    t_i1 = Type("i1")
-    t_i8 = Type("i8")
-    t_i32 = Type("i32")
-    t_i64 = Type("i64")
-
-    t_f32 = Type("f32")
-    t_f64 = Type("f64")
-
-    t_index = Type("index")
-
-    t_ui1 = Type("ui1")
+    typenames = ["i1", "i8", "i32", "i64", "f32", "f64"]
 
     # Placeholder for config files
     def __init__(self):
@@ -214,150 +210,50 @@ class MLIRSmith():
         # =============== Defining modules ===============
         module = Module()
 
-        # =============== Defining primitives ===============
+        # =============== Defining main function ===============
+        # Randomly create return types
+        return_types = []
+        while random.random() < 0.5:
+          return_types.append(Type(random.choice(self.typenames)))
 
-        # Define variables (Needs to be added to global scope in actual code)
-        v1 = Variable("x", self.t_i32)
-        v2 = Variable("y", self.t_i32)
-        v3 = Variable("z", self.t_i32)
+        f1 = Function("main", [], return_types)
+        
+        while(True):
 
+          if random.random() < 0.5:
+            name = "var" + str(len(self.global_scope) + 1)
+            type = Type(random.choice(self.typenames))
 
-        # Define a constant
-        const1 = Expression("arith.constant", [42], [self.t_i32])
-        module.statements.append(v2.parse_dict(const1))
+            if type.name == "f32" or type.name == "f64":
+                val = random.uniform(0, 1)
+            elif type.name == "i1":
+                val = random.randint(0, 1)
+            else :
+                val = random.randint(-10, 10)
 
-        # Define an expression
-        # TODO: Generator should pull primitives and their definitions (arguments, return type etc.) from a file or something
-        addi = Expression("arith.addi", [v1, v2], [self.t_i32])
-
-        # Add 'v3 = addi ..' to module statements
-        module.statements.append(v3.parse_dict(addi))
-
-        # =============== Defining Functions ===============
-        vf1 = v1 = Variable("a", self.t_i64) # define parameter variable
-        f1 = Function("count", [vf1], [self.t_i64, self.t_i64])
-
-        # Add statements and return variables to function
-        # In this example, we just return the params twice
-        f1.return_vars.extend([vf1, vf1])
+            const1 = Expression("arith.constant", [val], [type])
+            v2 = Variable(name, type)
+            f1.statements.append(v2.parse_dict(const1))
+            self.global_scope.append(v2)
+            
+          # Check if we can generate a return Op
+          available_return_types = [var.type for var in self.global_scope]
+          
+          # If so randomly decide to generate one
+          if all(elem in available_return_types for elem in return_types):
+            if random.random() < 0.5:
+              for type in return_types:
+                  possible_vars = [var for var in self.global_scope if var.type == type]
+                  f1.return_vars.append(random.choice(possible_vars))
+              break
 
         # Add function 'f1' to module statements
         module.statements.append(f1.parse_dict())
 
-        # =============== Defining For Loops ===============
-
-        # Define SSA variables
-        iv = Variable("iv", self.t_i32)
-        lb = Variable("lb", self.t_i32)
-        ub = Variable("ub", self.t_i32)
-        step = Variable("step", self.t_i32)
-
-        # Define iteration variables
-        sum_iter = Variable("sum_iter", self.t_f32)
-        sum_0 = Variable("sum_0", self.t_f32)
-
-        # Initialize For loop
-        l1 = ForLoop([iv, lb, ub, step], [(sum_iter, sum_0)], [self.t_f32], False)
-
-        # Add statements and yield to loop
-        sum_next = Variable("sum_next", self.t_f32)
-
-        addf = Expression("arith.addf", [sum_iter, sum_iter], [self.t_f32])
-
-        l1.statements.append(sum_next.parse_dict(addf))
-
-        yld1 = Expression("scf.yield", [sum_next], [self.t_f32])
-
-        l1.statements.append(yld1.parse_dict())
-
-        # Add for loop to module statements
-        module.statements.append(l1.parse_dict())
-
-
-        # =============== Defining If/Else statements ===============
-
-        # Set up condition variable (type = ui1)
-        cond = Variable("cond", self.t_ui1)
-        if1 = If(cond, [self.t_f32])
-
-        yld2 = Expression("scf.yield", [sum_next], [self.t_f32])
-
-        # Add yield to then block
-        if1.statements_then.append(yld2.parse_dict())
-
-        # Add if statement to module statements
-        module.statements.append(if1.parse_dict())
-
-        # =============== Defining WhileDo loop ===============
-
-        # Set up condition for the while do loop
-        next = Variable("next", self.t_f32)
-        while_cond = Condition(cond, next)
-
-        # Set up assignment list
-        arg1 = Variable("arg1", self.t_f32)
-        init1 = Variable("init1", self.t_f32)
-
-        w1 = WhileDo(while_cond, [(arg1, init1)], [self.t_f32])
-
-        # Add 'before' region
-        addf2 = Expression("arith.addf", [arg1, arg1], [self.t_f32])
-        w1.statements_before.append(next.parse_dict(addf2))
-
-        # Add 'after' region
-        yld3 = Expression("scf.yield", [arg1], [self.t_f32])
-        w1.statements_after.append(yld3.parse_dict())
-
-        module.statements.append(w1.parse_dict())
-
-
-        # =============== Defining Memref operations ===============
-
-        # Defining memref types
-        mr1 = TypeMemref([8, -1], self.t_f32)
-
-        # ***** Allocating some array (memref.alloc) *****
-        A = Variable("A", mr1)
-        maA = MemrefAlloc([8], mr1)
-
-        module.statements.append(A.parse_dict(maA))
-
-        # ***** Allocating some array on the stack (memref.alloca) *****
-        B = Variable("B", mr1)
-        maB = MemrefAlloca([16], mr1)
-
-        module.statements.append(B.parse_dict(maB))
-
-        # ***** Deallocating some array *****
-        # Note: Since dealloc is formatted as an expression, it is used like one
-        mdB = Expression("memref.dealloc", [B], [mr1])
-
-        module.statements.append(mdB.parse_dict())
-
-        # ***** Loading some value from A *****
-        loc1 = Variable("1", self.t_i32)
-        loc2 = Variable("2", self.t_i32)
-        loc12 = Variable("12", self.t_f32)
-
-        memload = MemrefLoad(A, [loc1, loc2])
-
-        module.statements.append(loc12.parse_dict(memload))
-
-        # ***** Storing some value to A *****
-        v4 = Variable("100", self.t_f32)
-
-        module.statements.append(MemrefStore(v4, A, [loc1, 7]).parse_dict())
-
-        # ***** Casting values *****
-        mr2 = TypeMemref([-1, -1], self.t_f32)
-        C = Variable("C", mr2)
-
-        module.statements.append(C.parse_dict(MemrefCast(A, mr1, mr2)))
-
         # =============== Output as MLIR ===============
         # Parse to mlir from dictionary
         string = self.parse_to_mlir(module.parse_dict())
-        print(string)
+        return string
 
     """
     Parses a dictionary 'id' into MLIR code.
@@ -379,8 +275,8 @@ class MLIRSmith():
             case "function":
                 return f"func.func @{id['name']} ({', '.join([f'%{p.name} : {p.type.name}' for p in id['params']])}) -> ({', '.join(f'{r.name}' for r in id['return_type'])}) {{ {nl}" + \
                     f"{nl.join([self.parse_to_mlir(s) for s in id['statements']])}" + \
-                    f"return {', '.join(f'%{r.name}' for r in id['return_vars'])} : {', '.join(f'{r.name}' for r in id['return_type'])} {nl} }}"
-            
+                    f"return {', '.join(f'%{r.name}' for r in id['return_vars'])} {':' if len(id['return_type']) > 0 else ''} {', '.join(f'{r.name}' for r in id['return_type'])} {nl} }}"
+             
             case "expression":
                 args = ', '.join(f"{i if isinstance(i, (int, float)) else '%'+i.name}" for i in id['args'])
 
