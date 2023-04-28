@@ -22,6 +22,7 @@
 - Execute safety checks and only commit if they succeed, else rollback 
 
 # Environment
-- Definitions of values and symbols as well as their types
+- Definitions of values (includes generating op and type)
+- Definitions of symbols + bound op
 - Call chain (avoid recursion)
 - Parent Op (limit depth)
