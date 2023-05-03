@@ -5,6 +5,15 @@
 
 from typing import List
 import random
+import resource, sys
+
+
+resource.setrlimit(resource.RLIMIT_STACK, (2**29,-1))
+sys.setrecursionlimit(10**6)
+
+
+# Global variables
+nl = '\n'
 
 
 class Type():
@@ -39,24 +48,20 @@ class TypeMemref(Type):
 
 
 class Module():
+    def generate(mlir_obj, env: List):
+        return Module.emit(Function.generate(mlir_obj, env))
 
-    def __init__(self):
-        # need to be initialized after generation
-        self.statements = []
-
-    def parse_dict(self):
-        return {"type": "module", "statements": self.statements}
+    def emit(statements: str):
+        return f"module {{ {nl} {statements} {nl} }}"
 
 
 class Expression():
-
-    def __init__(self, primitive: str, args: List, return_type: List[Type]):
-        self.primitive = primitive
-        self.args = args
-        self.return_type = return_type
-
-    def parse_dict(self):
-        return {"type": "expression", "primitive": self.primitive, "args": self.args, "return_type": self.return_type}
+    def generate(mlir_obj, env: List):
+        pass
+    
+    def emit(primitive: str, args, return_type):
+        args = ', '.join(f"{i if isinstance(i, (int, float)) else '%'+i.name}" for i in args)
+        return f"{primitive} {args} : {', '.join(f'{r.name}' for r in return_type)}"
 
 
 class Variable():
@@ -65,33 +70,53 @@ class Variable():
         self.name = name
         self.type = v_type
 
-    def parse_dict(self, expr: Expression):
-        return {"type": "assignment", "variable": self.name, "value": expr}
+    def generate(mlir_obj, env: List):
+        name = "var" + str(mlir_obj.global_scope_ctr)
+        type = Type(random.choice(mlir_obj.typenames))
 
+        if type.name == "f32" or type.name == "f64":
+            val = random.uniform(0, 1)
+        elif type.name == "i1":
+            val = random.randint(0, 1)
+        else:
+            val = random.randint(-10, 10)
+
+        const1 = Expression.emit("arith.constant", [val], [type])
+        v2 = Variable(name, type)
+
+        env.append(v2)
+        print(mlir_obj.global_scope_ctr)
+        mlir_obj.global_scope_ctr += 1
+
+        return Variable.emit([v2], const1)
+
+    def emit(assign_vars: List, expr: str):
+        return f"{', '.join([f'%{i.name}' for i in assign_vars])} = {expr}\n"
 
 class Function():
+    def generate(mlir_obj, env: List):
 
-    def __init__(self, name: str, params: List[Variable], return_type: List[Type]):
-        self.name = name
-        self.params = params
-        self.return_type = return_type
+        # make a copy of env
+        local_env = env.copy()
 
-        # need to be initialized after generation
-        self.statements = []
-        self.return_vars = []
+        # Randomly create return types
+        return_type = []
+        while random.random() < 0.5:
+            return_type.append(Type(random.choice(mlir_obj.typenames)))
 
-        # for internal usage
-        self.local_scope = params  #initial local scope is parameter set
+        mlir_obj.call_stack.append(("Function", "Main"))
 
-    def parse_dict(self):
-        return {
-            "type": "function",
-            "name": self.name,
-            "params": self.params,
-            "return_vars": self.return_vars,
-            "return_type": self.return_type,
-            "statements": self.statements
-        }
+        statements = mlir_obj.generate_region(local_env, return_type)
+
+        mlir_obj.call_stack = mlir_obj.call_stack[:-1]
+
+        return Function.emit("main", [], return_type, statements)
+
+    def emit(name: str, params, return_type, statements: str):
+        return f"func.func @{name} ({', '.join([f'%{p.name} : {p.type.name}' for p in params])}) -> ({', '.join(f'{r.name}' for r in return_type)}) {{ {nl}" + \
+            statements + \
+            f" {nl} }}"
+            
 
 
 class ForLoop():
@@ -127,24 +152,90 @@ class ForLoop():
 
 
 class If():
+    def generate(mlir_obj, env: List[Variable]):
+        
+        # make a copy of env
+        local_env = env.copy() 
 
-    def __init__(self, condition_var: Variable, return_type: List[Variable]):
-        if (condition_var.type.name != "ui1"):
-            raise ValueError("Condition variable must be 1-bit signless integer")
-        self.condition_var = condition_var
-        self.return_type = return_type
-        self.statements_then = []
-        self.statements_else = []
-        self.local_scope = []
+        # output string
+        output = ""
 
-    def parse_dict(self):
-        return {
-            "type": "if",
-            "condition_var": self.condition_var,
-            "return_type": self.return_type,
-            "statements_then": self.statements_then,
-            "statements_else": self.statements_else
-        }
+        if_return_type = []
+
+        while random.random() < 0.5:
+            if_return_type.append(Type(random.choice(mlir_obj.typenames)))
+
+        # Generate | Pick condition variable
+        p = random.random()
+        potential_cond_vars = [var for var in env if var.type.name == "i1"] # Get variables with type "i1"
+
+        name = "var" + str(mlir_obj.global_scope_ctr)
+        type = Type("i1")
+        val = random.randint(0, 1)
+        const1 = Expression.emit("arith.constant", [val], [type])
+        v2 = Variable(name, type)
+        condition_var = v2 
+
+        # If there exists potential ones, choose one with p=0.5 
+        if(len(potential_cond_vars) > 0 and p < 0.5):
+                condition_var = random.choice(potential_cond_vars)
+        else:
+            output += Variable.emit([v2], const1)
+            env.append(v2)
+            local_env.append(v2)
+            print(mlir_obj.global_scope_ctr)
+            mlir_obj.global_scope_ctr += 1
+        
+        # Append 'If' to the call sequence
+        mlir_obj.call_stack.append(("If", "?"))
+
+        statements_then = mlir_obj.generate_region(local_env, if_return_type)
+        statements_else = mlir_obj.generate_region(local_env, if_return_type)
+
+        if_str = If.emit(condition_var, if_return_type, statements_then, statements_else)
+
+        # Delete If call
+        mlir_obj.call_stack = mlir_obj.call_stack[:-1]
+
+        if(len(if_return_type) == 0):
+            if random.random() < 0.5:
+                return output+if_str
+        else:
+            # Check if we can generate a return Op
+            available_return_types = [var.type for var in local_env]
+
+            # If so randomly decide to generate one
+            if all(elem in available_return_types for elem in if_return_type):
+                assign_vars = []
+                for type in if_return_type:
+                    possible_vars = [var for var in local_env if var.type == type]
+                    choice = random.choice(possible_vars)
+                    assign_vars.append(choice)
+                return output + Variable.emit(assign_vars, if_str)
+            
+        return ""
+        
+
+    def emit(condition_var: Variable, return_type: List[Type], statements_then: str, statements_else: str):
+        cond = condition_var.name
+        else_output = ""
+        first_line = f"scf.if %{cond} -> ({', '.join(f'{r.name}' for r in return_type)}) {{ {nl}"
+
+        # Check if return type is empty, and adjust first line
+        if (len(return_type) == 0):
+            first_line = f"scf.if %{cond} {{ {nl}"
+
+        # Check if else case is populated
+        if (len(statements_else) != 0):
+            else_output = f" else {{ {nl}" + \
+            statements_else + \
+                f"{nl} }}"
+
+        return first_line + \
+                statements_then + \
+                f"{nl} }} {nl}" + \
+                else_output
+        
 
 
 class Condition():
@@ -234,74 +325,86 @@ class MemrefCast(Expression):
     def parse_dict(self):
         return {"type": "memrefcast", "source": self.source, "from_type": self.from_type, "to_type": self.to_type}
 
-
 class MLIRSmith():
 
     # Contains global variables in the module
     # Local variables are handled in their respective objects
-    global_scope = []
+    global_scope_ctr = 0
 
     # Define types for usage
     typenames = ["i1", "i8", "i32", "i64", "f32", "f64"]
+
+    # The call stack elements are defined as (Primitive, Name)
+    # The call sequence is from left to right
+    # Examples: 
+    # - ("Function", "Main")
+    # - ("If" : "Any")
+    call_stack = []
 
     # Placeholder for config files
     def __init__(self):
         return
 
-    """
-    Generates example code in MLIR.
-    self -- instance class data
-    """
+
+    def generate_region(self, env: List[Variable], return_type: List[Type]):
+        # copy environment
+        local_env = env.copy()
+
+        # Output string
+        output = ""
+
+        while (True):
+            p = random.randrange(90)
+            print(p)
+
+            # Define constant variable
+            if p < 80:
+                print("Variable")
+                output += Variable.generate(self, local_env)
+            elif p < 90:
+                if_output = If.generate(self, local_env)
+                print(if_output)
+                output += if_output
+
+            # Check if we can generate a return Op
+            available_return_types = [var.type for var in local_env]
+
+            # If so randomly decide to generate one
+            if all(elem in available_return_types for elem in return_type):
+                if random.random() < 0.8:
+                    return_obj = []
+                    for type in return_type:
+                        possible_vars = [var for var in local_env if var.type == type]
+                        choice = random.choice(possible_vars)
+                        return_obj.append(choice)
+
+                    # Scf type return
+                    print(self.call_stack)
+                    if((self.call_stack[-1])[0] == "If" and len(return_type) > 0):
+                        output += Expression.emit("scf.yield", return_obj, return_type)
+                    elif((self.call_stack[-1])[0] == "Function"):
+                        if(len(return_type) > 0):
+                            output += Expression.emit("func.return", return_obj, return_type)
+                        else:
+                            output += f"func.return {nl}"
+                        
+
+                    return output
 
     def generate_code(self):
 
         # =============== Defining modules ===============
-        module = Module()
+        self.global_scope_ctr = 0
+
+        generated_str = Module.generate(self, [])
 
         # =============== Defining main function ===============
-        # Randomly create return types
-        return_types = []
-        while random.random() < 0.5:
-            return_types.append(Type(random.choice(self.typenames)))
-
-        f1 = Function("main", [], return_types)
-
-        while (True):
-
-            if random.random() < 0.5:
-                name = "var" + str(len(self.global_scope) + 1)
-                type = Type(random.choice(self.typenames))
-
-                if type.name == "f32" or type.name == "f64":
-                    val = random.uniform(0, 1)
-                elif type.name == "i1":
-                    val = random.randint(0, 1)
-                else:
-                    val = random.randint(-10, 10)
-
-                const1 = Expression("arith.constant", [val], [type])
-                v2 = Variable(name, type)
-                f1.statements.append(v2.parse_dict(const1))
-                self.global_scope.append(v2)
-
-            # Check if we can generate a return Op
-            available_return_types = [var.type for var in self.global_scope]
-
-            # If so randomly decide to generate one
-            if all(elem in available_return_types for elem in return_types):
-                if random.random() < 0.5:
-                    for type in return_types:
-                        possible_vars = [var for var in self.global_scope if var.type == type]
-                        f1.return_vars.append(random.choice(possible_vars))
-                    break
-
-        # Add function 'f1' to module statements
-        module.statements.append(f1.parse_dict())
+        # available functions
+        avail_funcs = []
 
         # =============== Output as MLIR ===============
-        # Parse to mlir from dictionary
-        string = self.parse_to_mlir(module.parse_dict())
-        return string
+
+        return generated_str
 
     """
     Parses a dictionary 'id' into MLIR code.
@@ -314,21 +417,11 @@ class MLIRSmith():
         # hack: use as variable an insert
         nl = '\n'
 
-        if id['type'] == "modules":
-            return f"module {{ {nl} {nl.join([self.parse_to_mlir(s) for s in id['statements']])} {nl} }}"
-
-        if id['type'] == "assignment":
-            return f"%{id['variable']} = {self.parse_to_mlir(id['value'].parse_dict())}\n"
-
         if id['type'] == "function":
             return f"func.func @{id['name']} ({', '.join([f'%{p.name} : {p.type.name}' for p in id['params']])}) -> ({', '.join(f'{r.name}' for r in id['return_type'])}) {{ {nl}" + \
                     f"{nl.join([self.parse_to_mlir(s) for s in id['statements']])}" + \
-                    f"return {', '.join(f'%{r.name}' for r in id['return_vars'])} {':' if len(id['return_type']) > 0 else ''} {', '.join(f'{r.name}' for r in id['return_type'])} {nl} }}"
-
-        if id['type'] == "expression":
-            args = ', '.join(f"{i if isinstance(i, (int, float)) else '%'+i.name}" for i in id['args'])
-            return f"{id['primitive']} {args} : {', '.join(f'{r.name}' for r in id['return_type'])}"
-
+                    f"func.return {', '.join(f'%{r.name}' for r in id['return_vars'])} {':' if len(id['return_type']) > 0 else ''} {', '.join(f'{r.name}' for r in id['return_type'])} {nl} }}"
+            
         if id['type'] == "forloop":
             ssa_vars = id['ssa_vars']
             iv = ssa_vars[0].name
@@ -347,24 +440,6 @@ class MLIRSmith():
 
         if id['type'] == "condition":
             return f"scf.condition(%{id['condition_var'].name}) %{id['args'].name} : {id['args'].type.name}"
-
-        if id['type'] == "if":
-            cond = id["condition_var"].name
-            else_output = ""
-            first_line = f"scf.if %{cond} -> ({', '.join(f'{r.name}' for r in id['return_type'])}) {{ {nl}"
-
-            # Check if else case is populated
-            if (len(id["statements_else"]) != 0):
-                else_output = " else {{ {nl}" + \
-                f"{nl.join([self.parse_to_mlir(s) for s in id['statements_else']])} {nl} }}"
-
-            # Check if return type is empty, and adjust first line
-            if (len(id["return_type"]) == 0):
-                first_line = f"scf.if %{cond} {{ {nl}"
-
-            return first_line + \
-                f"{nl.join([self.parse_to_mlir(s) for s in id['statements_then']])} {nl} }}" + \
-                else_output
 
         if id['type'] == "whiledo":
             assignment_list = f"({', '.join(f'%{l.name} = %{r.name}' for (l,r) in id['assignment_list'])})"
