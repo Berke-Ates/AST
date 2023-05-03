@@ -5,12 +5,9 @@
 
 from typing import List
 import random
-import resource, sys
+import  sys
 
-
-resource.setrlimit(resource.RLIMIT_STACK, (2**29,-1))
 sys.setrecursionlimit(10**6)
-
 
 # Global variables
 nl = '\n'
@@ -85,7 +82,6 @@ class Variable():
         v2 = Variable(name, type)
 
         env.append(v2)
-        print(mlir_obj.global_scope_ctr)
         mlir_obj.global_scope_ctr += 1
 
         return Variable.emit([v2], const1)
@@ -183,7 +179,6 @@ class If():
             output += Variable.emit([v2], const1)
             env.append(v2)
             local_env.append(v2)
-            print(mlir_obj.global_scope_ctr)
             mlir_obj.global_scope_ctr += 1
         
         # Append 'If' to the call sequence
@@ -193,27 +188,36 @@ class If():
         statements_else = mlir_obj.generate_region(local_env, if_return_type)
 
         if_str = If.emit(condition_var, if_return_type, statements_then, statements_else)
+        
 
         # Delete If call
         mlir_obj.call_stack = mlir_obj.call_stack[:-1]
 
         if(len(if_return_type) == 0):
-            if random.random() < 0.5:
-                return output+if_str
+            return output+if_str
         else:
-            # Check if we can generate a return Op
-            available_return_types = [var.type for var in local_env]
-
-            # If so randomly decide to generate one
-            if all(elem in available_return_types for elem in if_return_type):
-                assign_vars = []
-                for type in if_return_type:
-                    possible_vars = [var for var in local_env if var.type == type]
-                    choice = random.choice(possible_vars)
-                    assign_vars.append(choice)
-                return output + Variable.emit(assign_vars, if_str)
+            assign_vars = []
             
-        return ""
+            for type in if_return_type:
+                # Generate list of all available types in env
+                possible_vars = [var for var in env if var.type == type]
+
+                # if there are no variables, create one and add it to env
+                if(len(possible_vars) == 0):
+                    name = "var" + str(mlir_obj.global_scope_ctr)
+                    v = Variable(name, type)
+                    possible_vars.append(v)
+                    env.append(v2)
+                    local_env.append(v2)
+                    mlir_obj.global_scope_ctr += 1
+
+                choice = random.choice(possible_vars)
+                assign_vars.append(choice)
+
+            return output + Variable.emit(assign_vars, if_str)
+            
+        
+
         
 
     def emit(condition_var: Variable, return_type: List[Type], statements_then: str, statements_else: str):
@@ -234,7 +238,7 @@ class If():
         return first_line + \
                 statements_then + \
                 f"{nl} }} {nl}" + \
-                else_output
+                else_output + f"{nl}"
         
 
 
@@ -355,15 +359,14 @@ class MLIRSmith():
 
         while (True):
             p = random.randrange(90)
-            print(p)
 
             # Define constant variable
             if p < 80:
-                print("Variable")
-                output += Variable.generate(self, local_env)
+                var_output = Variable.generate(self, local_env)
+                output += var_output
+
             elif p < 90:
                 if_output = If.generate(self, local_env)
-                print(if_output)
                 output += if_output
 
             # Check if we can generate a return Op
@@ -379,7 +382,6 @@ class MLIRSmith():
                         return_obj.append(choice)
 
                     # Scf type return
-                    print(self.call_stack)
                     if((self.call_stack[-1])[0] == "If" and len(return_type) > 0):
                         output += Expression.emit("scf.yield", return_obj, return_type)
                     elif((self.call_stack[-1])[0] == "Function"):
@@ -387,9 +389,9 @@ class MLIRSmith():
                             output += Expression.emit("func.return", return_obj, return_type)
                         else:
                             output += f"func.return {nl}"
-                        
-
+                    
                     return output
+                
 
     def generate_code(self):
 
