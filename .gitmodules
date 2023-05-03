@@ -1,6 +1,6 @@
 [submodule "llvm-project"]
 	path = llvm-project
-	url = https://github.com/llvm/llvm-project
+	url = https://github.com/Berke-Ates/llvm-project
 [submodule "dace"]
 	path = dace
 	url = https://github.com/spcl/dace
