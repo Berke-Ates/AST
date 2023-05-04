@@ -12,7 +12,6 @@ sys.setrecursionlimit(10**6)
 # Global variables
 nl = '\n'
 
-
 class Type():
 
     def __init__(self, name: str):
@@ -86,6 +85,7 @@ class Variable():
 
         return Variable.emit([v2], const1)
 
+
     def emit(assign_vars: List, expr: str):
         return f"{', '.join([f'%{i.name}' for i in assign_vars])} = {expr}\n"
 
@@ -112,39 +112,153 @@ class Function():
         return f"func.func @{name} ({', '.join([f'%{p.name} : {p.type.name}' for p in params])}) -> ({', '.join(f'{r.name}' for r in return_type)}) {{ {nl}" + \
             statements + \
             f" {nl} }}"
-            
-
 
 class ForLoop():
-    # SSA vars are initialized in order:
+    # SSA loop vars are initialized in order:
     # ssa_vars[0]: iteration var
     # ssa_vars[1]: lower bound var
     # ssa_vars[2]: upper bound var
     # ssa_vars[3]: step var
 
-    def __init__(self, ssa_vars: List[Variable], iter_args: 'List[tuple[Variable, Variable]]', return_type: List[Type],
-                 index_case: bool):
-        if (len(ssa_vars) != 4):
-            raise ValueError("SSA array requires 4 variables")
+    def generate(mlir_obj, env: List[Variable]):
 
-        self.ssa_vars = ssa_vars
-        self.return_type = return_type
-        self.iter_args = iter_args
-        self.statements = []
-        self.index_case = index_case
+        # output string
+        output = ""
 
-        # for internal usage
-        self.local_scope = ssa_vars
 
-    def parse_dict(self):
-        return {
-            "type": "forloop",
-            "ssa_vars": self.ssa_vars,
-            "return_type": self.return_type,
-            "iter_args": self.iter_args,
-            "statements": self.statements,
-            "index_case": self.index_case
-        }
+        # Generate random return type
+        for_return_type = []
+        while random.random() < 0.5:
+            for_return_type.append(Type(random.choice(mlir_obj.typenames)))
+
+        # ====== Generate | Pick loop variables (must be SSA) ====== 
+        ssa_vars = []
+        index_case = True
+
+        # Pick index or signless integer case
+        if random.random() < 0.5:
+            index_case = False
+
+        # Pick index variables (Leave out i1 as it doesn't make sense)
+        type_name = ""
+        if index_case:
+            type_name = "index"
+        else:
+            p = random.random()
+            if p < 0.33:
+                type_name = "i8"
+            elif p < 0.66:
+                type_name = "i32"
+            else:
+                type_name = "i64"
+
+        existing_vars = [var for var in env if var.type.name == type_name]
+
+        # while we still have elements in existing_vars and we haven't populated ssa_vars, add some existing variable
+        while(len(existing_vars) > 0 and len(ssa_vars) < 3):
+            if random.random() < 0.5:
+                choice = random.choice(existing_vars)
+                ssa_vars.append(choice)
+                existing_vars.remove(choice)
+        
+        # while we haven't populated ssa_vars, create variables
+        while(len(ssa_vars) < 3):
+            name = "var" + str(mlir_obj.global_scope_ctr)
+            type = Type(type_name)
+            val = random.randint(-10, 10)
+            const_ssa = Expression.emit("arith.constant", [val], [type])
+            ssa = Variable(name, type)
+
+            mlir_obj.global_scope_ctr += 1
+            output += Variable.emit([ssa], const_ssa)
+            ssa_vars.append(ssa)
+                
+        # Since step must be positive, we will instead generate a positive variable with 100% certainty
+        # TODO: extend in the future
+        name = "var" + str(mlir_obj.global_scope_ctr)
+        type = Type(type_name)
+        val = random.randint(1, 10) # only positive ranges
+        const_step = Expression.emit("arith.constant", [val], [type])
+        step = Variable(name, type)
+
+        mlir_obj.global_scope_ctr += 1
+        output += Variable.emit([step], const_step)
+        ssa_vars.append(step)
+
+        # ====== Generate | Pick iteration arguments ====== 
+        iter_args = []
+
+        # Choose random environment variable and assign it to newly generated variable
+        while random.random() < 0.25:
+            if(len(env) > 0):
+                choice = random.choice(env)
+
+                name = "var" + str(mlir_obj.global_scope_ctr)
+                type = Type(choice.type.name)
+                v = Variable(name, type)
+                mlir_obj.global_scope_ctr += 1
+
+                iter_args.append((v, choice))
+
+        # ======  Add generated variables to environment ====== 
+        for elem in ssa_vars:
+            env.append(elem)
+
+        # Finally, copy environment
+        local_env = env.copy()
+
+        # Add iter_arg to the local environment\
+        for (left, _) in iter_args:
+            local_env.append(left)
+
+        # ======  Append 'For' to the call sequence ====== 
+        mlir_obj.call_stack.append(("ForLoop", "?"))
+
+        statements = mlir_obj.generate_region(local_env, for_return_type)
+
+        for_str = ForLoop.emit(ssa_vars, index_case, iter_args, for_return_type, statements)
+        
+        # Delete Forloop call
+        mlir_obj.call_stack = mlir_obj.call_stack[:-1]
+
+        if(len(for_return_type) == 0):
+            return output+for_str
+        else:
+            assign_vars = []
+            
+            for type in for_return_type:
+                # Generate list of all available types in env
+                possible_vars = [var for var in env if var.type == type]
+
+                # if there are no variables, create one and add it to env
+                if(len(possible_vars) == 0):
+                    name = "var" + str(mlir_obj.global_scope_ctr)
+                    v = Variable(name, type)
+                    possible_vars.append(v)
+                    env.append(v)
+                    local_env.append(v)
+                    mlir_obj.global_scope_ctr += 1
+
+                choice = random.choice(possible_vars)
+                assign_vars.append(choice)
+
+            return output + Variable.emit(assign_vars, for_str)
+
+    def emit(ssa_vars: List[Variable], index_case: bool, iter_args: 'List[tuple[Variable, Variable]]', return_type: List[Type], statements: str):
+        iv = ssa_vars[0].name
+        lb = ssa_vars[1].name
+        ub = ssa_vars[2].name
+        step = ssa_vars[3].name
+
+        # Include iteration type if not index case
+        it_type = ""
+        if (not index_case):
+            it_type = f": {ssa_vars[0].type.name}"
+
+        return f"scf.for %{iv} = %{lb} to %{ub} step %{step} " + it_type + f"{nl}" + \
+            f"iter_args({', '.join(f'%{l.name} = %{r.name}' for (l,r) in iter_args)}) ->  ({', '.join(f'{r.name}' for r in return_type)}) {{ {nl}" + \
+            f"{statements} {nl} }} {nl}"
+        
 
 
 class If():
@@ -188,7 +302,6 @@ class If():
         statements_else = mlir_obj.generate_region(local_env, if_return_type)
 
         if_str = If.emit(condition_var, if_return_type, statements_then, statements_else)
-        
 
         # Delete If call
         mlir_obj.call_stack = mlir_obj.call_stack[:-1]
@@ -207,8 +320,8 @@ class If():
                     name = "var" + str(mlir_obj.global_scope_ctr)
                     v = Variable(name, type)
                     possible_vars.append(v)
-                    env.append(v2)
-                    local_env.append(v2)
+                    env.append(v)
+                    local_env.append(v)
                     mlir_obj.global_scope_ctr += 1
 
                 choice = random.choice(possible_vars)
@@ -336,7 +449,7 @@ class MLIRSmith():
     global_scope_ctr = 0
 
     # Define types for usage
-    typenames = ["i1", "i8", "i32", "i64", "f32", "f64"]
+    typenames = ["i1", "i8", "i32", "i64", "f32", "f64", "index"]
 
     # The call stack elements are defined as (Primitive, Name)
     # The call sequence is from left to right
@@ -362,12 +475,13 @@ class MLIRSmith():
 
             # Define constant variable
             if p < 80:
-                var_output = Variable.generate(self, local_env)
-                output += var_output
+                output += Variable.generate(self, local_env)
 
             elif p < 90:
-                if_output = If.generate(self, local_env)
-                output += if_output
+                output += ForLoop.generate(self, local_env)
+
+            elif p < 110:
+                output += If.generate(self, local_env)
 
             # Check if we can generate a return Op
             available_return_types = [var.type for var in local_env]
@@ -382,7 +496,7 @@ class MLIRSmith():
                         return_obj.append(choice)
 
                     # Scf type return
-                    if((self.call_stack[-1])[0] == "If" and len(return_type) > 0):
+                    if(((self.call_stack[-1])[0] == "If" or (self.call_stack[-1])[0] == "ForLoop") and len(return_type) > 0):
                         output += Expression.emit("scf.yield", return_obj, return_type)
                     elif((self.call_stack[-1])[0] == "Function"):
                         if(len(return_type) > 0):
@@ -418,27 +532,6 @@ class MLIRSmith():
         # cannot include backslash/newline in f-string expr
         # hack: use as variable an insert
         nl = '\n'
-
-        if id['type'] == "function":
-            return f"func.func @{id['name']} ({', '.join([f'%{p.name} : {p.type.name}' for p in id['params']])}) -> ({', '.join(f'{r.name}' for r in id['return_type'])}) {{ {nl}" + \
-                    f"{nl.join([self.parse_to_mlir(s) for s in id['statements']])}" + \
-                    f"func.return {', '.join(f'%{r.name}' for r in id['return_vars'])} {':' if len(id['return_type']) > 0 else ''} {', '.join(f'{r.name}' for r in id['return_type'])} {nl} }}"
-            
-        if id['type'] == "forloop":
-            ssa_vars = id['ssa_vars']
-            iv = ssa_vars[0].name
-            lb = ssa_vars[1].name
-            ub = ssa_vars[2].name
-            step = ssa_vars[3].name
-
-            # Include iteration type if not index case
-            it_type = ""
-            if (not (id['index_case'])):
-                it_type = f": {ssa_vars[0].type.name}"
-
-            return f"scf.for %{iv} = %{lb} to %{ub} step %{step} " + it_type + f"{nl}" + \
-                f"iter_args({', '.join(f'%{l.name} = %{r.name}' for (l,r) in id['iter_args'])}) ->  ({', '.join(f'{r.name}' for r in id['return_type'])}) {{ {nl}" + \
-                f"{nl.join([self.parse_to_mlir(s) for s in id['statements']])} {nl} }}"
 
         if id['type'] == "condition":
             return f"scf.condition(%{id['condition_var'].name}) %{id['args'].name} : {id['args'].type.name}"
