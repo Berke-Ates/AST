@@ -87,6 +87,9 @@ class Variable():
 
 
     def emit(assign_vars: List, expr: str):
+        if(len(assign_vars) == 0):
+            return expr
+        
         return f"{', '.join([f'%{i.name}' for i in assign_vars])} = {expr}\n"
 
 class Function():
@@ -221,28 +224,10 @@ class ForLoop():
         # Delete Forloop call
         mlir_obj.call_stack = mlir_obj.call_stack[:-1]
 
-        if(len(for_return_type) == 0):
-            return output+for_str
-        else:
-            assign_vars = []
-            
-            for type in for_return_type:
-                # Generate list of all available types in env
-                possible_vars = [var for var in env if var.type == type]
+        assign_vars = mlir_obj.find_assignment_vars(env, for_return_type)
 
-                # if there are no variables, create one and add it to env
-                if(len(possible_vars) == 0):
-                    name = "var" + str(mlir_obj.global_scope_ctr)
-                    v = Variable(name, type)
-                    possible_vars.append(v)
-                    env.append(v)
-                    local_env.append(v)
-                    mlir_obj.global_scope_ctr += 1
+        return output + Variable.emit(assign_vars, for_str)
 
-                choice = random.choice(possible_vars)
-                assign_vars.append(choice)
-
-            return output + Variable.emit(assign_vars, for_str)
 
     def emit(ssa_vars: List[Variable], index_case: bool, iter_args: 'List[tuple[Variable, Variable]]', return_type: List[Type], statements: str):
         iv = ssa_vars[0].name
@@ -356,38 +341,93 @@ class If():
 
 
 class Condition():
+    def emit(condition_var: Variable, return_obj: List[Variable]):
 
-    def __init__(self, condition_var: Variable, args: Variable):
-        self.condition_var = condition_var
-        self.args = args  # either zero or one argument
-
-    def parse_dict(self):
-        return {"type": "condition", "condition_var": self.condition_var, "args": self.args}
-
+        if(len(return_obj) > 0):
+            return f"scf.condition(%{condition_var.name}) {', '.join(f'{r.name}' for r in return_obj)} : {', '.join(f'{r.type.name}' for r in return_obj)}"
+        
+        return f"scf.condition(%{condition_var.name})"
+        
 
 class WhileDo():
 
-    def __init__(self, condition: Condition, assignment_list: 'List[tuple[Variable, Variable]]',
-                 return_type: List[Variable]):
-        self.condition = condition
-        self.assignment_list = assignment_list
-        self.return_type = return_type
+    def generate(mlir_obj, env: List):
+        # Copy environment
+        local_env = env.copy()
 
-        # Before and after regions
-        self.statements_before = []
-        self.statements_after = []
-        self.local_scope_before = []
-        self.local_scope_after = []
+        # output string
+        output = ""
 
-    def parse_dict(self):
-        return {
-            "type": "whiledo",
-            "condition": self.condition,
-            "assignment_list": self.assignment_list,
-            "return_type": self.return_type,
-            "statements_before": self.statements_before,
-            "statements_after": self.statements_after
-        }
+        # Generate random return type
+        while_return_type = []
+        while random.random() < 0.5:
+            while_return_type.append(Type(random.choice(mlir_obj.typenames)))
+
+        # Pick RHS argument list assignment variables and create corresponding, new LHS assignment list variables
+        assignment_list = []
+        while random.random() < 0.5:
+            if(len(env) > 0):
+                choice = random.choice(env)
+
+                name = "var" + str(mlir_obj.global_scope_ctr)
+                type = Type(choice.type.name)
+                v = Variable(name, type)
+                mlir_obj.global_scope_ctr += 1
+                local_env.append(v)
+
+                assignment_list.append((v, choice))
+
+        # ========== Generate before region ==========
+        # Append 'WhileDo' to the call sequence: Distinguish before and after region for the condition/yield statement
+        mlir_obj.call_stack.append(("WhileDo", "Before"))
+
+        # scf.condition is handled in generate_region
+        statements_before = mlir_obj.generate_region(local_env, while_return_type)
+        
+        # Delete 'WhileDo' before region call
+        mlir_obj.call_stack = mlir_obj.call_stack[:-1]
+
+        # Create new variables for the after region arguments
+        # Have to be added to local env
+        after_region_arguments = []
+
+        for type in while_return_type:
+            name = "var" + str(mlir_obj.global_scope_ctr)
+            v = Variable(name, type)
+            mlir_obj.global_scope_ctr += 1
+            local_env.append(v)
+            after_region_arguments.append(v)
+
+        # ========== Generate after region ==========
+        # Append 'WhileDo' to the call sequence: Distinguish before and after region for the condition/yield statement
+        mlir_obj.call_stack.append(("WhileDo", "After"))
+
+        # scf.yield is handled in generate_region
+        statements_after = mlir_obj.generate_region(local_env, while_return_type)
+        
+        # Delete 'WhileDo' before region call
+        mlir_obj.call_stack = mlir_obj.call_stack[:-1]
+
+        while_str = WhileDo.emit(assignment_list, statements_before, statements_after, after_region_arguments, while_return_type)
+
+        assign_vars = mlir_obj.find_assignment_vars(env, while_return_type)
+
+        return Variable.emit(assign_vars, while_str)
+
+    def emit(assignment_list: 'List[tuple[Variable, Variable]]', statements_before: str, statements_after: str, after_region_arguments: List[Variable], return_type: List[Type]):
+        assignment_list_str = ""
+        if(len(assignment_list) > 0):
+            assignment_list_str = f"({', '.join(f'%{l.name} = %{r.name}' for (l,r) in assignment_list)})"
+
+        func_type_str = f": ({', '.join(f'{l.type.name}' for (l,r) in assignment_list)}) -> ({', '.join(f'{r.name}' for r in return_type)})"
+        after_arguments_str = f"^bb0({', '.join(f'%{v.name} : {v.type.name}' for v in after_region_arguments)}): {nl}"
+
+        return "scf.while " + assignment_list_str + func_type_str + f"{{ {nl}" + \
+                statements_before+ \
+                 f"{nl} }} do {{ {nl}" + \
+                 after_arguments_str + \
+                statements_after + \
+                f"{nl} }}"
 
 
 class MemrefLoad(Expression):
@@ -478,10 +518,13 @@ class MLIRSmith():
                 output += Variable.generate(self, local_env)
 
             elif p < 90:
-                output += ForLoop.generate(self, local_env)
+                output += WhileDo.generate(self, local_env)
 
             elif p < 110:
                 output += If.generate(self, local_env)
+
+            elif p < 120:
+                output += ForLoop.generate(self, local_env)
 
             # Check if we can generate a return Op
             available_return_types = [var.type for var in local_env]
@@ -496,13 +539,33 @@ class MLIRSmith():
                         return_obj.append(choice)
 
                     # Scf type return
-                    if(((self.call_stack[-1])[0] == "If" or (self.call_stack[-1])[0] == "ForLoop") and len(return_type) > 0):
+                    if(((self.call_stack[-1])[0] == "If" or (self.call_stack[-1])[0] == "ForLoop" or ((self.call_stack[-1])[0] == "WhileDo" and (self.call_stack[-1])[1] == "After")) and len(return_type) > 0):
                         output += Expression.emit("scf.yield", return_obj, return_type)
                     elif((self.call_stack[-1])[0] == "Function"):
                         if(len(return_type) > 0):
                             output += Expression.emit("func.return", return_obj, return_type)
                         else:
                             output += f"func.return {nl}"
+                    elif((self.call_stack[-1])[0] == "WhileDo" and (self.call_stack[-1])[1] == "Before"):
+                        # Generate | Pick condition variable
+                        p = random.random()
+                        potential_cond_vars = [var for var in env if var.type.name == "i1"] # Get variables with type "i1"
+
+                        name = "var" + str(self.global_scope_ctr)
+                        type = Type("i1")
+                        val = random.randint(0, 1)
+                        const1 = Expression.emit("arith.constant", [val], [type])
+                        condition_var = Variable(name, type)
+
+                        # If there exists potential ones, choose one with p=0.5 
+                        if(len(potential_cond_vars) > 0 and p < 0.5):
+                            condition_var = random.choice(potential_cond_vars)
+                        else:
+                            output += Variable.emit([condition_var], const1)
+                            local_env.append(condition_var)
+                            self.global_scope_ctr += 1
+
+                        output += Condition.emit(condition_var, return_obj)
                     
                     return output
                 
@@ -510,41 +573,44 @@ class MLIRSmith():
     def generate_code(self):
 
         # =============== Defining modules ===============
+        #Reinitialize global scope and environment
         self.global_scope_ctr = 0
+        self.call_stack = []
+        env = []
 
-        generated_str = Module.generate(self, [])
-
-        # =============== Defining main function ===============
-        # available functions
-        avail_funcs = []
-
-        # =============== Output as MLIR ===============
+        generated_str = Module.generate(self, env)
 
         return generated_str
+    
+    # Finds a list of assignment variables given an environment and the requested return types.
+    # If there is no variable with a type, a new one is added. The printing of the newly initialized variable is handled clientside.
+    def find_assignment_vars(self, env: List, return_type):
+        if(len(return_type) == 0):
+            return []
+        else:
+            assign_vars = []
+            
+            for type in return_type:
+                # Generate list of all available types in env
+                possible_vars = [var for var in env if var.type == type]
 
-    """
-    Parses a dictionary 'id' into MLIR code.
-    self -- instance class data
-    id -- dictionary from parse_dict
-    """
+                # if there are no variables, create one and add it to env
+                if(len(possible_vars) == 0):
+                    name = "var" + str(self.global_scope_ctr)
+                    v = Variable(name, type)
+                    possible_vars.append(v)
+                    env.append(v)
+                    self.global_scope_ctr += 1
+
+                choice = random.choice(possible_vars)
+                assign_vars.append(choice)
+
+            return assign_vars
 
     def parse_to_mlir(self, id):
         # cannot include backslash/newline in f-string expr
         # hack: use as variable an insert
         nl = '\n'
-
-        if id['type'] == "condition":
-            return f"scf.condition(%{id['condition_var'].name}) %{id['args'].name} : {id['args'].type.name}"
-
-        if id['type'] == "whiledo":
-            assignment_list = f"({', '.join(f'%{l.name} = %{r.name}' for (l,r) in id['assignment_list'])})"
-            func_type = f": ({', '.join(f'%{l.type.name}' for (l,r) in id['assignment_list'])}) -> ({', '.join(f'{r.name}' for r in id['return_type'])})"
-
-            return "scf.while " + assignment_list + func_type + f"{{ {nl}" + \
-                f"{nl.join([self.parse_to_mlir(s) for s in id['statements_before']])}" + \
-                self.parse_to_mlir(id["condition"].parse_dict()) + f"{nl} }} do {{ {nl}" + \
-                f"{nl.join([self.parse_to_mlir(s) for s in id['statements_after']])}" + \
-                f"{nl} }}"
 
         if id['type'] == "memreftype":
             dim_list = id['dimension_list']
