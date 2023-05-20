@@ -22,14 +22,12 @@ class Type():
             return self.name == __value.name
         return False
 
-
 # If the rank is unknown, leave the dimension list empty
 # If the dimension is dynamic, use '-1' in the dimension list
 class TypeMemref(Type):
-
     def __init__(self, dimension_list: List[int], type: Type):
-        self.dimension_list = dimension_list
         self.type = type
+        self.dimension_list = dimension_list
 
         # Case for unknown rank
         if (len(dimension_list) == 0):
@@ -39,9 +37,10 @@ class TypeMemref(Type):
 
         self.name = f"memref<{str_dim}x{type.name}>"
 
-    def parse_dict(self):
-        return {"type": "typememref", "name": self.name, "dimension_list": self.dimension_list, "type": self.type}
-
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, Type):
+            return self.name == __value.name
+        return False
 
 class Module():
     def generate(mlir_obj, env: List):
@@ -91,6 +90,73 @@ class Variable():
             return expr
         
         return f"{', '.join([f'%{i.name}' for i in assign_vars])} = {expr}\n"
+    
+# If the rank is unknown, leave the dimension list empty
+# If the dimension is dynamic, use '-1' in the dimension list
+class MemrefVariable():
+
+    def __init__(self, name: str, v_type: Type, dimension_list: List[int]):
+        self.name = name
+        self.type = v_type
+        self.dimension_list = dimension_list
+
+    def generate(mlir_obj, env: List):
+        # Generation proceeds as follows
+        # 1. Choose type
+        # 2. Choose dimensions
+        # 3. Create memref variable object
+        # 4. Add variable object to environments
+        # 5. Create argument list
+        # 6. Choose either alloc() or alloca()
+        # 7. Emit
+
+        # Type
+        type = Type(random.choice(mlir_obj.typenames))
+
+        # Dimensions
+        dimension_list = []
+
+        # Remember: Dimension list left empty will generate an unranked memref
+        # Emulating do-while loop here to ensure at least one dimension is added
+        dimension_list.append(mlir_obj.dimension_finder())
+        while random.random() < 0.4:
+            dimension_list.append(mlir_obj.dimension_finder())
+
+        # Create variable object
+        memref_type = TypeMemref(dimension_list, type)
+        name = "var" + str(mlir_obj.global_scope_ctr)
+        memref_variable = MemrefVariable(name, memref_type, dimension_list)
+
+        env.append(memref_variable)
+        mlir_obj.global_scope_ctr += 1
+
+        # Argument list
+        # Find number of dynamic dimension
+        dyn_count = len([elem for elem in dimension_list if elem == -1]) 
+        arg_list = []
+        # Get all variables with type 'index'
+        index_vars = [var for var in env if var.type.name == "index"]
+        for _ in range(dyn_count):
+            if random.random() < 0.5 and len(index_vars) > 0: 
+                arg_list.append(random.choice(index_vars))
+            else:
+                arg_list.append(random.randint(1, 100))
+        
+        alloc_str = ""
+
+        if random.random() < 0.7:
+            alloc_str = MemrefAlloc.emit(memref_variable, arg_list)
+        else:
+            alloc_str = MemrefAlloca.emit(memref_variable, arg_list)
+
+        return MemrefVariable.emit(name, alloc_str)
+
+    # Since memref variables are bound to a memref allocating operation, pass
+    def emit(var_name: str, alloc_str):
+        return f"%{var_name} = {alloc_str}"
+        
+    
+
 
 class Function():
     def generate(mlir_obj, env: List):
@@ -431,56 +497,54 @@ class WhileDo():
 
 
 class MemrefLoad(Expression):
+    def generate(mlir_obj, env: List):
+        pass
 
-    def __init__(self, memref: Variable, indices):
-        self.memref = memref
-        self.indices = indices  # list of constants and variables
-        self.mem_type = type
+    def emit(memref_var: MemrefVariable, indices_list: List):
+        memref = memref_var.name
+        indices = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in indices_list)
 
-    def parse_dict(self):
-        return {"type": "memrefload", "memref": self.memref, "indices": self.indices}
+        return f"memref.load %{memref}[{indices}] : {memref_var.type.name}"
 
 
 class MemrefStore(Expression):
+    def generate(mlir_obj, env: List):
+        pass
 
-    def __init__(self, value: Variable, memref: Variable, indices):
-        self.value = value
-        self.memref = memref
-        self.indices = indices  # list of constants and variables
+    def emit(value_var: Variable, memref_var: MemrefVariable, indices_list: List):
+        value = value_var.name
+        memref = memref_var.name
+        indices = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in indices_list)
 
-    def parse_dict(self):
-        return {"type": "memrefstore", "value": self.value, "memref": self.memref, "indices": self.indices}
+        return f"memref.store %{value}, %{memref}[{indices}] : {memref_var.type.name}"
 
 
-class MemrefAlloc(Expression):
+class MemrefAlloc():
+    # Allocation is handled from MemrefVariable
+    def generate(mlir_obj, env: List):
+        pass
 
-    def __init__(self, arg_list: List, type: TypeMemref):
-        self.arg_list = arg_list
-        self.mem_type = type
-
-    def parse_dict(self):
-        return {"type": "memrefalloc", "arg_list": self.arg_list, "mem_type": self.mem_type}
+    def emit(mem_var: MemrefVariable, arg_list: List[Variable]):
+        arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in arg_list)
+        return f"memref.alloc({arg_list}) : {mem_var.type.name} {nl}"
 
 
 class MemrefAlloca(Expression):
+    # Allocation is handled from MemrefVariable
+    def generate(mlir_obj, env: List):
+        pass
 
-    def __init__(self, arg_list: List, type: TypeMemref):
-        self.arg_list = arg_list
-        self.mem_type = type
-
-    def parse_dict(self):
-        return {"type": "memrefalloca", "arg_list": self.arg_list, "mem_type": self.mem_type}
+    def emit(mem_var: MemrefVariable, arg_list: List[Variable]):
+        arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in arg_list)
+        return f"memref.alloca({arg_list}) : {mem_var.type.name} {nl}"
 
 
 class MemrefCast(Expression):
+    def generate(mlir_obj, env: List):
+        pass
 
-    def __init__(self, source: Variable, from_type: TypeMemref, to_type: TypeMemref):
-        self.source = source
-        self.from_type = from_type
-        self.to_type = to_type
-
-    def parse_dict(self):
-        return {"type": "memrefcast", "source": self.source, "from_type": self.from_type, "to_type": self.to_type}
+    def parse_dict(source: MemrefVariable, from_type: TypeMemref, to_type: TypeMemref):
+        return f"memref.cast %{source.name} : {from_type.name} to {to_type.name}"
 
 class MLIRSmith():
 
@@ -502,7 +566,6 @@ class MLIRSmith():
     def __init__(self):
         return
 
-
     def generate_region(self, env: List[Variable], return_type: List[Type]):
         # copy environment
         local_env = env.copy()
@@ -517,14 +580,18 @@ class MLIRSmith():
             if p < 80:
                 output += Variable.generate(self, local_env)
 
+            # Define memory alloc operation
             elif p < 90:
-                output += WhileDo.generate(self, local_env)
+                output += MemrefVariable.generate(self, local_env)
 
             elif p < 110:
                 output += If.generate(self, local_env)
 
             elif p < 120:
                 output += ForLoop.generate(self, local_env)
+
+            elif p < 140:
+                output += WhileDo.generate(self, local_env)
 
             # Check if we can generate a return Op
             available_return_types = [var.type for var in local_env]
@@ -606,51 +673,12 @@ class MLIRSmith():
                 assign_vars.append(choice)
 
             return assign_vars
-
-    def parse_to_mlir(self, id):
-        # cannot include backslash/newline in f-string expr
-        # hack: use as variable an insert
-        nl = '\n'
-
-        if id['type'] == "memreftype":
-            dim_list = id['dimension_list']
-            type = id['type']
-
-            # Case for unknown rank
-            if (len(dim_list) == 0):
-                return f"memref<*x{type.name}>"
-
-            str_dim = 'x'.join(f'%{"?" if i == -1 else i}' for i in dim_list)
-
-            return f"memref<{str_dim}x{type.name}>"
-
-        if id['type'] == "memrefload":
-            memref = id['memref'].name
-            indices = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in id['indices'])
-
-            return f"memref.load %{memref}[{indices}] : {id['memref'].type.name}"
-
-        if id['type'] == "memrefstore":
-            value = id['value'].name
-            memref = id['memref'].name
-            indices = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in id['indices'])
-
-            return f"memref.store %{value}, %{memref}[{indices}] : {id['memref'].type.name}"
-
-        if id['type'] == "memrefalloc":
-            arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in id['arg_list'])
-            return f"memref.alloc({arg_list}) : {id['mem_type'].name}"
-
-        if id['type'] == "memrefalloca":
-            arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in id['arg_list'])
-
-            return f"memref.alloca({arg_list}) : {id['mem_type'].name}"
-
-        if id['type'] == "memrefcast":
-            return f"memref.cast %{id['source'].name} : {id['from_type'].name} to {id['to_type'].name}"
-
-        return "\n"
-
+    
+    # Returns either unknown dimension or some random dimension
+    def dimension_finder(self):
+        if random.random() < 0.6:
+            return random.randint(1,100)
+        return -1
 
 def main():
     s = MLIRSmith()
