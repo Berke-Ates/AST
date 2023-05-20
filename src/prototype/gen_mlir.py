@@ -24,6 +24,7 @@ class Type():
 
 # If the rank is unknown, leave the dimension list empty
 # If the dimension is dynamic, use '-1' in the dimension list
+# The unranked dimension list specifies the unranked dimensions after allocations (from left to right)
 class TypeMemref(Type):
     def __init__(self, dimension_list: List[int], type: Type):
         self.type = type
@@ -49,7 +50,6 @@ class Module():
     def emit(statements: str):
         return f"module {{ {nl} {statements} {nl} }}"
 
-
 class Expression():
     def generate(mlir_obj, env: List):
         pass
@@ -57,7 +57,6 @@ class Expression():
     def emit(primitive: str, args, return_type):
         args = ', '.join(f"{i if isinstance(i, (int, float)) else '%'+i.name}" for i in args)
         return f"{primitive} {args} : {', '.join(f'{r.name}' for r in return_type)}"
-
 
 class Variable():
 
@@ -93,20 +92,22 @@ class Variable():
     
 # If the rank is unknown, leave the dimension list empty
 # If the dimension is dynamic, use '-1' in the dimension list
+# The unranked dimension list specifies the unranked dimensions after allocations (from left to right)
 class MemrefVariable():
 
-    def __init__(self, name: str, v_type: Type, dimension_list: List[int]):
+    def __init__(self, name: str, v_type: Type, dimension_list: List[int], unranked_dimension_list: List):
         self.name = name
         self.type = v_type
         self.dimension_list = dimension_list
+        self.unranked_dimension_list = unranked_dimension_list
 
     def generate(mlir_obj, env: List):
         # Generation proceeds as follows
         # 1. Choose type
         # 2. Choose dimensions
-        # 3. Create memref variable object
-        # 4. Add variable object to environments
-        # 5. Create argument list
+        # 3. Create argument list
+        # 4. Create memref variable object
+        # 5. Add variable object to environments
         # 6. Choose either alloc() or alloca()
         # 7. Emit
 
@@ -122,14 +123,6 @@ class MemrefVariable():
         while random.random() < 0.4:
             dimension_list.append(mlir_obj.dimension_finder())
 
-        # Create variable object
-        memref_type = TypeMemref(dimension_list, type)
-        name = "var" + str(mlir_obj.global_scope_ctr)
-        memref_variable = MemrefVariable(name, memref_type, dimension_list)
-
-        env.append(memref_variable)
-        mlir_obj.global_scope_ctr += 1
-
         # Argument list
         # Find number of dynamic dimension
         dyn_count = len([elem for elem in dimension_list if elem == -1]) 
@@ -141,22 +134,27 @@ class MemrefVariable():
                 arg_list.append(random.choice(index_vars))
             else:
                 arg_list.append(random.randint(1, 100))
+
+        # Create variable object
+        memref_type = TypeMemref(dimension_list, type)
+        name = "var" + str(mlir_obj.global_scope_ctr)
+        memref_variable = MemrefVariable(name, memref_type, dimension_list, arg_list)
+
+        env.append(memref_variable)
+        mlir_obj.global_scope_ctr += 1
         
         alloc_str = ""
 
         if random.random() < 0.7:
-            alloc_str = MemrefAlloc.emit(memref_variable, arg_list)
+            alloc_str = MemrefAlloc.emit(memref_variable)
         else:
-            alloc_str = MemrefAlloca.emit(memref_variable, arg_list)
+            alloc_str = MemrefAlloca.emit(memref_variable)
 
         return MemrefVariable.emit(name, alloc_str)
 
     # Since memref variables are bound to a memref allocating operation, pass
     def emit(var_name: str, alloc_str):
         return f"%{var_name} = {alloc_str}"
-        
-    
-
 
 class Function():
     def generate(mlir_obj, env: List):
@@ -309,8 +307,6 @@ class ForLoop():
         return f"scf.for %{iv} = %{lb} to %{ub} step %{step} " + it_type + f"{nl}" + \
             f"iter_args({', '.join(f'%{l.name} = %{r.name}' for (l,r) in iter_args)}) ->  ({', '.join(f'{r.name}' for r in return_type)}) {{ {nl}" + \
             f"{statements} {nl} }} {nl}"
-        
-
 
 class If():
     def generate(mlir_obj, env: List[Variable]):
@@ -403,8 +399,6 @@ class If():
                 statements_then + \
                 f"{nl} }} {nl}" + \
                 else_output + f"{nl}"
-        
-
 
 class Condition():
     def emit(condition_var: Variable, return_obj: List[Variable]):
@@ -412,8 +406,7 @@ class Condition():
         if(len(return_obj) > 0):
             return f"scf.condition(%{condition_var.name}) {', '.join(f'{r.name}' for r in return_obj)} : {', '.join(f'{r.type.name}' for r in return_obj)}"
         
-        return f"scf.condition(%{condition_var.name})"
-        
+        return f"scf.condition(%{condition_var.name})" 
 
 class WhileDo():
 
@@ -495,10 +488,43 @@ class WhileDo():
                 statements_after + \
                 f"{nl} }}"
 
-
 class MemrefLoad(Expression):
     def generate(mlir_obj, env: List):
-        pass
+        # Generation
+        # 1. Find/Generate memref variable
+        # 2. Find/Generate indices
+        # 3. Assign variable and add it to environment
+
+        output = ""
+        # Generate/Choose memref variable
+        potential_memref_vars = [var for var in env if isinstance(var, MemrefVariable)] # Get potential variables with memref type
+        if random.random() < 0.75 and len(potential_memref_vars) > 0:
+            memref_var = random.choice(potential_memref_vars)
+        else:
+            output += MemrefVariable.generate(mlir_obj, env)
+            memref_var = env[-1]
+
+        # Find/Generate indices
+        count_idx = len(memref_var.dimension_list)
+        potential_indices_vars = [var for var in env if var.type.name == "index"]
+        indices_list = []
+        while(len(indices_list) != count_idx):
+            if random.random() > 0.75 and len(potential_indices_vars) > 0:
+                indices_list.append(random.choice(potential_indices_vars))
+            else:
+                indices_list.append(random.randint(0,100))
+
+        # Create variable and add it to environment
+        name = "var" + str(mlir_obj.global_scope_ctr)
+        type = memref_var.type
+        var = Variable(name, type)
+
+        env.append(var)
+        mlir_obj.global_scope_ctr += 1
+
+        memref_load_str = MemrefLoad.emit(memref_var, indices_list)
+        output += Variable.emit([var], memref_load_str)
+        return output
 
     def emit(memref_var: MemrefVariable, indices_list: List):
         memref = memref_var.name
@@ -509,14 +535,55 @@ class MemrefLoad(Expression):
 
 class MemrefStore(Expression):
     def generate(mlir_obj, env: List):
-        pass
+        # Generation
+        # 1. Either generate or choose a memref variable
+        # 2. Find or generate value
+        # 3. Find or generate indices
+        # 4. Emit
+
+        output = ""
+        # Generate/Choose memref variable
+        potential_memref_vars = [var for var in env if isinstance(var.type, TypeMemref)] # Get potential variables with memref type
+
+        if random.random() > 0.75 and len(potential_memref_vars) > 0:
+            memref_var = random.choice(potential_memref_vars)
+        else:
+            output += MemrefVariable.generate(mlir_obj, env)
+            memref_var = env[-1]
+
+        # Find/Generate value
+        potential_value_vars = [var for var in env if var.type == memref_var.type]
+
+        if random.random() > 0.75 and len(potential_value_vars) > 0:
+            value_var = random.choice(potential_value_vars)
+        else:
+            type = memref_var.type
+            if type.name == "f32" or type.name == "f64":
+                value_var = random.uniform(0, 1)
+            elif type.name == "i1":
+                value_var = random.randint(0, 1)
+            else:
+                value_var = random.randint(-10, 10)
+
+        # Find/Generate indices
+        count_idx = len(memref_var.dimension_list)
+        potential_indices_vars = [var for var in env if var.type.name == "index"]
+        indices_list = []
+        while(len(indices_list) != count_idx):
+            if random.random() > 0.75 and len(potential_indices_vars) > 0:
+                indices_list.append(random.choice(potential_indices_vars))
+            else:
+                indices_list.append(random.randint(0,100))
+
+        output += MemrefStore.emit(value_var, memref_var, indices_list)
+        return output
+        
 
     def emit(value_var: Variable, memref_var: MemrefVariable, indices_list: List):
-        value = value_var.name
         memref = memref_var.name
         indices = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in indices_list)
 
-        return f"memref.store %{value}, %{memref}[{indices}] : {memref_var.type.name}"
+        return f"memref.store {value_var if isinstance(value_var, int) else '%'+value_var.name}, %{memref}[{indices}] : {memref_var.type.name} {nl}"
 
 
 class MemrefAlloc():
@@ -524,8 +591,8 @@ class MemrefAlloc():
     def generate(mlir_obj, env: List):
         pass
 
-    def emit(mem_var: MemrefVariable, arg_list: List[Variable]):
-        arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in arg_list)
+    def emit(mem_var: MemrefVariable):
+        arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in mem_var.unranked_dimension_list)
         return f"memref.alloc({arg_list}) : {mem_var.type.name} {nl}"
 
 
@@ -534,8 +601,8 @@ class MemrefAlloca(Expression):
     def generate(mlir_obj, env: List):
         pass
 
-    def emit(mem_var: MemrefVariable, arg_list: List[Variable]):
-        arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in arg_list)
+    def emit(mem_var: MemrefVariable):
+        arg_list = ', '.join(f"{i if isinstance(i, int) else '%'+i.name}" for i in mem_var.unranked_dimension_list)
         return f"memref.alloca({arg_list}) : {mem_var.type.name} {nl}"
 
 
@@ -577,12 +644,12 @@ class MLIRSmith():
             p = random.randrange(90)
 
             # Define constant variable
-            if p < 80:
+            if p < 40:
                 output += Variable.generate(self, local_env)
 
             # Define memory alloc operation
             elif p < 90:
-                output += MemrefVariable.generate(self, local_env)
+                output += MemrefLoad.generate(self, local_env)
 
             elif p < 110:
                 output += If.generate(self, local_env)

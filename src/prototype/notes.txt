@@ -7,7 +7,3 @@ memref.dealloc %0 : memref<8x64xf32>
 
 - Attributes not implemented
 
-- Memref inherits Type and should therefore be used like a type
-
-- Memref operations inherit Expression
-
