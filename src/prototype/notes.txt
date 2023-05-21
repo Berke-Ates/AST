@@ -3,7 +3,8 @@ Maybe in the actual implementation each of these should be modeled as a inherite
 Examples:
 scf.yield %x : i32
 arith.addi %x, %y : i32
-memref.dealloc %0 : memref<8x64xf32>
+An expection is memref.dealloc %0 : memref<8x64xf32> because it uses a special type
+
 
 - Attributes not implemented
 

@@ -127,13 +127,8 @@ class MemrefVariable():
         # Find number of dynamic dimension
         dyn_count = len([elem for elem in dimension_list if elem == -1]) 
         arg_list = []
-        # Get all variables with type 'index'
-        index_vars = [var for var in env if var.type.name == "index"]
         for _ in range(dyn_count):
-            if random.random() < 0.5 and len(index_vars) > 0: 
-                arg_list.append(random.choice(index_vars))
-            else:
-                arg_list.append(random.randint(1, 100))
+            arg_list.append(random.randint(1, 100))
 
         # Create variable object
         memref_type = TypeMemref(dimension_list, type)
@@ -586,7 +581,7 @@ class MemrefStore(Expression):
         return f"memref.store {value_var if isinstance(value_var, int) else '%'+value_var.name}, %{memref}[{indices}] : {memref_var.type.name} {nl}"
 
 
-class MemrefAlloc():
+class MemrefAlloc(Expression):
     # Allocation is handled from MemrefVariable
     def generate(mlir_obj, env: List):
         pass
@@ -608,10 +603,70 @@ class MemrefAlloca(Expression):
 
 class MemrefCast(Expression):
     def generate(mlir_obj, env: List):
-        pass
+        # 1. Pick / Generate source variable
+        # 2. Create new memref type that matches shape  
+        # 4. Emit
 
-    def parse_dict(source: MemrefVariable, from_type: TypeMemref, to_type: TypeMemref):
-        return f"memref.cast %{source.name} : {from_type.name} to {to_type.name}"
+        output = ""
+        # Pick/Generate memref variable
+        potential_memref_vars = [var for var in env if isinstance(var.type, TypeMemref)] # Get potential variables with memref type
+
+        if len(potential_memref_vars) > 0:
+            source_var = random.choice(potential_memref_vars)
+        else:
+            output += MemrefVariable.generate(mlir_obj, env)
+            source_var = env[-1]
+
+        # Note: In MLIR, when you cast a MemRef type from one to another, 
+        # the source variable is still accessible and can be used. 
+        # Casting a MemRef type in MLIR does not invalidate or make the source variable unreachable.
+        
+        # Create new memref type
+        # .shape_cast() handles all details
+        dimension_list, unranked_dimension_list = mlir_obj.shape_cast(source_var.dimension_list, source_var.unranked_dimension_list)
+
+        dest_memref_type = TypeMemref(dimension_list, source_var.type.type)
+        name = "var" + str(mlir_obj.global_scope_ctr)
+        dest_memref_var = MemrefVariable(name, dest_memref_type, dimension_list, unranked_dimension_list)
+
+        env.append(dest_memref_var)
+        mlir_obj.global_scope_ctr += 1
+
+        # Emit
+        cast_str = MemrefCast.emit(source_var, source_var.type, dest_memref_type)
+
+        output += MemrefVariable.emit(name, cast_str)
+        return output
+
+    def emit(source: MemrefVariable, from_type: TypeMemref, to_type: TypeMemref):
+        return f"memref.cast %{source.name} : {from_type.name} to {to_type.name} {nl}"
+
+class MemrefDealloc(Expression):
+    def generate(mlir_obj, env: List):
+        # 1. Pick / Generate memref variable
+        # 2. Remove from environment
+        # 3. Emit
+        
+        output = ""
+        # Pick/Generate memref variable
+        potential_memref_vars = [var for var in env if isinstance(var.type, TypeMemref)] # Get potential variables with memref type
+
+        if len(potential_memref_vars) > 0:
+            memref_var = random.choice(potential_memref_vars)
+        else:
+            output += MemrefVariable.generate(mlir_obj, env)
+            memref_var = env[-1]
+
+        # Remove from environment
+        del env[-1]
+
+        # Emit
+        output += MemrefDealloc.emit(memref_var)
+        return output
+
+
+    def emit(memref_var: MemrefVariable):
+        return f"memref.dealloc %{memref_var.name} : {memref_var.type.name} {nl}"
 
 class MLIRSmith():
 
@@ -649,7 +704,7 @@ class MLIRSmith():
 
             # Define memory alloc operation
             elif p < 90:
-                output += MemrefLoad.generate(self, local_env)
+                output += MemrefCast.generate(self, local_env)
 
             elif p < 110:
                 output += If.generate(self, local_env)
@@ -746,6 +801,65 @@ class MLIRSmith():
         if random.random() < 0.6:
             return random.randint(1,100)
         return -1
+    
+    # Returns two new dimension lists that adhere to the memref.cast specification
+    # Note: The source and destination types are compatible if
+    # a. Both are ranked memref types with the same element type, address space, and rank and
+    # the individual sizes may convert constant dimensions to dynamic dimensions and vice-versa.
+    # b. Either or both memref types are unranked with the same element type, and address space.
+    def shape_cast(self, source_dimension_list: List, source_unranked_dimension_list: List):
+        # 1. Case: unranked type
+        # 2. Case: ranked/dynamic type 
+        # a. Find length
+        # b. Find integers that divide and add them to the list of dimensions
+        # The way we do is we create a product list first and then pick and choose dimensions
+        # to be dynamic. The dynamic dimensions will then get the multiplier from the list
+        # supplied to the unranked dimension list
+
+        dimension_list = []
+        unranked_dimension_list = []
+
+        if(len(source_dimension_list) == 0):
+            dimension_list.append(self.dimension_finder())
+            while random.random() < 0.4:
+                dimension_list.append(self.dimension_finder())
+
+            for dim in dimension_list:
+                if dim == -1:
+                    unranked_dimension_list.append(random.randint(1,100))
+        else:
+            # Verify lengths
+            if(len([dim for dim in source_dimension_list if dim == -1]) != len(source_unranked_dimension_list)):
+                raise IndexError("Lengths of source dimension list of dynamic type and unranked dimension do not coincide.")
+            
+            length = 1
+            idx = 0
+
+            for dim in source_dimension_list:
+                if dim == -1:
+                    length *= source_unranked_dimension_list[idx]
+                    idx+=1
+                else:
+                    length *= dim
+
+            for _ in range(len(source_dimension_list) - 1):
+                # Generate a random integer within a range that guarantees the product remains the same
+                num = random.randint(1, length)
+                dimension_list.append(num)
+                length //= num
+
+            # The last element in the list is the remaining product
+            dimension_list.append(length)
+
+            # Now choose elements to make dynamic and add to unranked_dimension_list
+            for i in range(len(dimension_list)):
+                if random.random() < 0.2:
+                    val = dimension_list[i]
+                    dimension_list[i] = -1
+                    unranked_dimension_list.append(val)
+
+        return dimension_list, unranked_dimension_list
+
 
 def main():
     s = MLIRSmith()

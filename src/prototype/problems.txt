@@ -17,7 +17,8 @@ Fix:
 [-] scf.if with no return type special case needs to be implemented
 Fix:
 
-[-] memref.store and memref.load do not check whether their indices overflow the dimensions
-Potential fix: Do not use variables to supply unranked dimensions with; unranked_dimension_list can then be checked easily
+[-] memref.store, memref.load and memref.cast do not check whether their indices overflow the dimensions
+Current implementation: No checks at all
+For now: Do not use variables to supply unranked dimensions with; unranked_dimension_list can then be checked easily
 since every dimension is an integer
 Fix: 
