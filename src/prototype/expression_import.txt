@@ -1,0 +1,35 @@
+float; arith.addf; float, float
+int; arith.addi; int, int
+int, i1 ; arith.addui_extended ; int, int
+int; arith.andi; int, int
+int; arith.ceildivsi; int, int
+int; arith.ceildivui; int, int
+i1; arith.cmpf; predicate_f, float, float
+i1; arith.cmpi; predicate_i, int, int
+float; arith.divf; float, float
+int; arith.divsi; int, int
+int; arith.divui; int, int
+int; arith.floordivsi; int, int
+float; arith.maxf; float, float
+int; arith.maxsi; int, int
+int; arith.maxui; int, int
+float; arith.minf; float, float
+int; arith.minsi; int, int
+int; arith.minui; int, int
+float; arith.mulf; float, float
+int; arith.muli; int, int
+int, int; arith.mulsi_extended; int, int
+int, int; arith.mului_extended; int, int
+float; arith.negf; float
+int; arith.ori; int
+float; arith.remf; float, float
+int; arith.remsi; int, int
+int; arith.remui; int, int
+int; arith.shli; int, int
+int; arith.shrsi; int, int
+int; arith.shrui; int, int
+float; arith.subf; float, float
+int; arith.subi; int, int
+int; arith.xori; int, int
+int; arith.select; i1, int, int
+float; arith.select; i1, float, float

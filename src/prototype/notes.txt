@@ -8,3 +8,21 @@ An expection is memref.dealloc %0 : memref<8x64xf32> because it uses a special t
 
 - Attributes not implemented
 
+- Bool-like types are to be declared as type 'i1'
+
+- If an operation can take any type (i.e. float and int), the operation must be declared twice
+once with int and once with float
+
+Typecast operation list:
+- arith.bitcast
+- arith.extf
+- arith.extsi
+- arith.extui
+- arith.fptosi
+- arith.fptoui
+- arith.index_cast
+- arith.index_castui
+- arith.sitofp
+- arith.truncf
+- arith.trunci
+- arith.uitofp

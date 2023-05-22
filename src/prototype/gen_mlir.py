@@ -675,7 +675,21 @@ class MLIRSmith():
     global_scope_ctr = 0
 
     # Define types for usage
-    typenames = ["i1", "i8", "i32", "i64", "f32", "f64", "index"]
+    typenames = []
+
+    int_typenames = ["i1", "i8", "i32", "i64", "index"]
+    float_typenames = ["f32", "f64"]
+
+    # Define available operations
+    available_operations = {
+        'i1': {},
+        'i8': {},
+        'i32': {},
+        'i64': {},
+        'f32': {},
+        'f64': {},
+        'index': {}
+    }
 
     # The call stack elements are defined as (Primitive, Name)
     # The call sequence is from left to right
@@ -684,9 +698,60 @@ class MLIRSmith():
     # - ("If" : "Any")
     call_stack = []
 
-    # Placeholder for config files
-    def __init__(self):
+    # Imports available operations and inserts them into available_operations
+    def __init__(self, operations_import_file: str):
+        self.typenames = self.int_typenames + self.float_typenames
+        self.initialize_operations(operations_import_file)
+
+        print(self.available_operations["i1"])
         return
+    
+    def initialize_operations(self, operations_import_file: str):
+        with open(operations_import_file, 'r') as file:
+            for line in file:
+                # Parse the instruction line to extract resulting_type; instruction_name; operands
+                instruction_name, operands, result_types = MLIRSmith.parse_instruction_line(line)
+
+                for type in result_types:
+                    if (type == "int"):
+                        for int_type in self.int_typenames:
+                            # Match all int types and convert them to the specific type to be used
+                            self.available_operations[int_type][instruction_name] = [[int_type if elem == "int" else elem for elem in result_types],
+                                                                                        [int_type if elem == "int" else elem for elem in operands]]
+                    elif (type == "float"):
+                        for float_type in self.float_typenames:
+                            # Match all float types and convert them to the specific type to be used
+                            self.available_operations[float_type][instruction_name] = [[float_type if elem == "float" else elem for elem in result_types],
+                                                                                        [float_type if elem == "float" else elem for elem in operands]]
+                    else:
+                        # FIX ME: If it is possible to mix int and float types then this implementation won't work because
+                        # this implementation only considers the same types
+                        if("int" in operands):
+                            for int_type in self.int_typenames:
+                                # Match all int types and convert them to the specific type to be used
+                                self.available_operations[int_type][instruction_name] = [[int_type if elem == "int" else elem for elem in result_types],
+                                                                                        [int_type if elem == "int" else elem for elem in operands]]
+                        elif("float" in operands):
+                            for float_type in self.float_typenames:
+                                # Match all float types and convert them to the specific type to be used
+                                self.available_operations[float_type][instruction_name] = [[float_type if elem == "float" else elem for elem in result_types],
+                                                                                        [float_type if elem == "float" else elem for elem in operands]]
+                        else:
+                            self.available_operations[type][instruction_name] = [result_types, operands]
+
+
+
+    def parse_instruction_line(line: str):
+        line_parts = line.strip().split(';')
+        # Extract the instruction name
+        instruction_name = line_parts[1].strip()
+        # Extract the resulting types
+        result_types = [result_type.strip() for result_type in line_parts[0].split(',')]
+        # Extract the operand types
+        operand_types = [operand_type.strip() for operand_type in line_parts[2].split(',')]
+
+        return instruction_name, operand_types, result_types
+
 
     def generate_region(self, env: List[Variable], return_type: List[Type]):
         # copy environment
@@ -862,7 +927,7 @@ class MLIRSmith():
 
 
 def main():
-    s = MLIRSmith()
+    s = MLIRSmith("expression_import.txt")
     print(s.generate_code())
 
 
