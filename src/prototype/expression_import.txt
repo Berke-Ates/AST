@@ -21,7 +21,7 @@ int; arith.muli; int, int
 int, int; arith.mulsi_extended; int, int
 int, int; arith.mului_extended; int, int
 float; arith.negf; float
-int; arith.ori; int
+int; arith.ori; int, int
 float; arith.remf; float, float
 int; arith.remsi; int, int
 int; arith.remui; int, int

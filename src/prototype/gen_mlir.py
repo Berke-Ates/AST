@@ -68,12 +68,7 @@ class Variable():
         name = "var" + str(mlir_obj.global_scope_ctr)
         type = Type(random.choice(mlir_obj.typenames))
 
-        if type.name == "f32" or type.name == "f64":
-            val = random.uniform(0, 1)
-        elif type.name == "i1":
-            val = random.randint(0, 1)
-        else:
-            val = random.randint(-10, 10)
+        val = mlir_obj.sample_value(type.name)
 
         const1 = Expression.emit("arith.constant", [val], [type])
         v2 = Variable(name, type)
@@ -702,15 +697,12 @@ class MLIRSmith():
     def __init__(self, operations_import_file: str):
         self.typenames = self.int_typenames + self.float_typenames
         self.initialize_operations(operations_import_file)
-        local = []
-        result = self.generate_instruction_with_returntype("i32", local)
-        print(result)
         return
     
     def initialize_operations(self, operations_import_file: str):
         # Add constant operations
         for type in self.typenames:
-            self.available_operations[type]["arith.constant"] = [[type], [type, type]]
+            self.available_operations[type]["arith.constant"] = [[type], [type]]
 
         # Add imported files
         with open(operations_import_file, 'r') as file:
@@ -775,6 +767,7 @@ class MLIRSmith():
             return "", [random.choice(existing_vars)]
 
     # Returns a string containing all operations to generate an instruction of at least return type 'type'
+    # and additionally returns the assigned variables
     def generate_instruction_with_returntype(self, type: str, env: List):
         if(type not in self.typenames):
             raise ValueError(f"Type {type} is not registered as a type.")
@@ -787,7 +780,8 @@ class MLIRSmith():
         operands = avail_instr_list[instr_name][1]
 
         operand_list = []
-        # Retrieve operands
+        # Retrieve operands by sampling from env, if possible
+        # If this fails, a operand variable is generated
         for operand in operands:
             op_str, op_var = self.sample_generate_instruction_with_returntype(operand, env)
             for op_v in op_var:
@@ -808,34 +802,43 @@ class MLIRSmith():
             assign_vars.append(v)
             self.global_scope_ctr += 1
 
-        return Variable.emit(assign_vars, expr_emit), assign_vars
+        output += Variable.emit(assign_vars, expr_emit)
 
+        return output, assign_vars
+
+    # Tries to sample an existing variable with the requested type first
+    # If none exists, a new constant is generated 
     def sample_generate_instruction_with_returntype(self, type: str, env: List):
         sample_result = self.sample_instruction_with_returntype(type, env)
-
         if sample_result is not None:
             sample_str, sample_var = sample_result
+
+            # Only return this with some probability so small programs still have a selection of variables
+            if random.random() < 0.6:
+                return sample_str, sample_var
+            
+        # Create arith.constant calls
+        name = "var" + str(self.global_scope_ctr)
+        val = self.sample_value(type)
+
+        const = Expression.emit("arith.constant", [val], [Type(type)])
+        v = Variable(name, Type(type))
+
+        env.append(v)
+        self.global_scope_ctr += 1
+
+        return Variable.emit([v], const), [v]
+
+    # Samples a value for a given type
+    def sample_value(self, type: str):
+        val = 0
+        if type == "f32" or type == "f64":
+            val = random.uniform(0, 1)
+        elif type == "i1":
+            val = random.randint(0, 1)
         else:
-            # Create arith.constant calls
-            name = "var" + str(self.global_scope_ctr)
-            
-            if type == "f32" or type == "f64":
-                val = random.uniform(0, 1)
-            elif type == "i1":
-                val = random.randint(0, 1)
-            else:
-                val = random.randint(-10, 10)
-
-            const = Expression.emit("arith.constant", [val], [Type(type)])
-            v = Variable(name, Type(type))
-
-            env.append(v)
-            self.global_scope_ctr += 1
-
-            return Variable.emit([v], const), [v]
-            
-        return sample_str, sample_var
-
+            val = random.randint(-10, 10)
+        return val
 
     def generate_region(self, env: List[Variable], return_type: List[Type]):
         # copy environment
@@ -847,9 +850,10 @@ class MLIRSmith():
         while (True):
             p = random.randrange(90)
 
-            # Define constant variable
-            if p < 40:
-                output += Variable.generate(self, local_env)
+            # Define arith/math operations
+            if p < 80:
+                output_str, output_vars = self.generate_instruction_with_returntype(random.choice(self.typenames), local_env)
+                output += output_str
 
             # Define memory alloc operation
             elif p < 90:
