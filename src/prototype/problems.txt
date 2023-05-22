@@ -22,3 +22,6 @@ Current implementation: No checks at all
 For now: Do not use variables to supply unranked dimensions with; unranked_dimension_list can then be checked easily
 since every dimension is an integer
 Fix: 
+
+[-] arith.cmpi and arith.cmpf can only take integers from 0-9 and 0-15 respectively. This is not accounted for
+Fix:

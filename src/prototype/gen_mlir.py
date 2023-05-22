@@ -702,11 +702,17 @@ class MLIRSmith():
     def __init__(self, operations_import_file: str):
         self.typenames = self.int_typenames + self.float_typenames
         self.initialize_operations(operations_import_file)
-
-        print(self.available_operations["i1"])
+        local = []
+        result = self.generate_instruction_with_returntype("i32", local)
+        print(result)
         return
     
     def initialize_operations(self, operations_import_file: str):
+        # Add constant operations
+        for type in self.typenames:
+            self.available_operations[type]["arith.constant"] = [[type], [type, type]]
+
+        # Add imported files
         with open(operations_import_file, 'r') as file:
             for line in file:
                 # Parse the instruction line to extract resulting_type; instruction_name; operands
@@ -725,7 +731,7 @@ class MLIRSmith():
                                                                                         [float_type if elem == "float" else elem for elem in operands]]
                     else:
                         # FIX ME: If it is possible to mix int and float types then this implementation won't work because
-                        # this implementation only considers the same types
+                        # this implementation only considers equal type operations
                         if("int" in operands):
                             for int_type in self.int_typenames:
                                 # Match all int types and convert them to the specific type to be used
@@ -739,8 +745,7 @@ class MLIRSmith():
                         else:
                             self.available_operations[type][instruction_name] = [result_types, operands]
 
-
-
+    # Parses a instruction line
     def parse_instruction_line(line: str):
         line_parts = line.strip().split(';')
         # Extract the instruction name
@@ -751,6 +756,85 @@ class MLIRSmith():
         operand_types = [operand_type.strip() for operand_type in line_parts[2].split(',')]
 
         return instruction_name, operand_types, result_types
+    
+    # Returns a list of available instructions that return at least the requested type
+    def fetch_instructions_with_returntype(self, type: str):
+        if(type not in self.typenames):
+            raise ValueError(f"Type {type} is not registered as a type.")
+        
+        return self.available_operations[type]
+    
+    # Returns an empty string and a variable of type 'type' if possible
+    def sample_instruction_with_returntype(self, type: str, env: List):
+        if(type not in self.typenames):
+            raise ValueError(f"Type {type} is not registered as a type.")
+        
+        existing_vars = [var for var in env if var.type.name == type]
+
+        if(len(existing_vars) > 0):
+            return "", [random.choice(existing_vars)]
+
+    # Returns a string containing all operations to generate an instruction of at least return type 'type'
+    def generate_instruction_with_returntype(self, type: str, env: List):
+        if(type not in self.typenames):
+            raise ValueError(f"Type {type} is not registered as a type.")
+        
+        output = ""
+        
+        avail_instr_list = self.fetch_instructions_with_returntype(type)
+        instr_name = random.choice(list(avail_instr_list.keys()))
+        result_types = avail_instr_list[instr_name][0]
+        operands = avail_instr_list[instr_name][1]
+
+        operand_list = []
+        # Retrieve operands
+        for operand in operands:
+            op_str, op_var = self.sample_generate_instruction_with_returntype(operand, env)
+            for op_v in op_var:
+                if(op_v.type.name == type):
+                    operand_list.append(op_v) # Add only one of the requested operand types
+                    break
+            output += op_str
+
+        expr_emit = Expression.emit(instr_name, operand_list, [Type(result_type) for result_type in result_types])
+        
+        assign_vars = []
+
+        # Create variables and add them to env
+        for type in result_types:
+            name = "var" + str(self.global_scope_ctr)
+            v = Variable(name, Type(type))
+            env.append(v)
+            assign_vars.append(v)
+            self.global_scope_ctr += 1
+
+        return Variable.emit(assign_vars, expr_emit), assign_vars
+
+    def sample_generate_instruction_with_returntype(self, type: str, env: List):
+        sample_result = self.sample_instruction_with_returntype(type, env)
+
+        if sample_result is not None:
+            sample_str, sample_var = sample_result
+        else:
+            # Create arith.constant calls
+            name = "var" + str(self.global_scope_ctr)
+            
+            if type == "f32" or type == "f64":
+                val = random.uniform(0, 1)
+            elif type == "i1":
+                val = random.randint(0, 1)
+            else:
+                val = random.randint(-10, 10)
+
+            const = Expression.emit("arith.constant", [val], [Type(type)])
+            v = Variable(name, Type(type))
+
+            env.append(v)
+            self.global_scope_ctr += 1
+
+            return Variable.emit([v], const), [v]
+            
+        return sample_str, sample_var
 
 
     def generate_region(self, env: List[Variable], return_type: List[Type]):
@@ -929,6 +1013,7 @@ class MLIRSmith():
 def main():
     s = MLIRSmith("expression_import.txt")
     print(s.generate_code())
+
 
 
 if __name__ == "__main__":

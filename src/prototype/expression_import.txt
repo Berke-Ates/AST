@@ -4,8 +4,8 @@ int, i1 ; arith.addui_extended ; int, int
 int; arith.andi; int, int
 int; arith.ceildivsi; int, int
 int; arith.ceildivui; int, int
-i1; arith.cmpf; predicate_f, float, float
-i1; arith.cmpi; predicate_i, int, int
+i1; arith.cmpf; i64, float, float
+i1; arith.cmpi; i64, int, int
 float; arith.divf; float, float
 int; arith.divsi; int, int
 int; arith.divui; int, int
