@@ -101,6 +101,9 @@ clang $opt_lvl_cc $flags "$output_dir"/"${input_name}"_mlir.s \
 ## DCIR Pipeline
 ##===----------------------------------------------------------------------===##
 
+# Clear DaCe cache
+rm -rf "$DACE_default_build_folder"
+
 # Converting to SDFG Dialect
 sdfg-opt --convert-to-sdfg "$output_dir"/"${input_name}"_mlir_opt.mlir \
   >"$output_dir"/"${input_name}"_dcir_sdfg.mlir
@@ -122,6 +125,9 @@ objdump -d "$obj_file" >"$output_dir"/"${input_name}"_dcir_sdfg.s
 ##===----------------------------------------------------------------------===##
 ## DaCe Pipeline
 ##===----------------------------------------------------------------------===##
+
+# Clear DaCe cache
+rm -rf "$DACE_default_build_folder"
 
 # Converting to SDFG Dialect
 sdfg-opt --convert-to-sdfg "$mlir_file" \
