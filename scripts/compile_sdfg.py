@@ -14,11 +14,8 @@ if len(sys.argv) != 5:
     print("SDFG Optimization and Compilation Tool")
     print("Arguments:")
     print("  Input SDFG: The SDFG to optimize")
-    print(
-        "  Optimization Level (0-3): Determines how many optimizations to apply"
-    )
-    print(
-        "  Add Timing Instrumentation (T/F): If 'T', measures execution time")
+    print("  Optimization Level (0-3): Determines how many optimizations to apply")
+    print("  Add Timing Instrumentation (T/F): If 'T', measures execution time")
     exit(1)
 
 input_file = sys.argv[1]
@@ -29,6 +26,9 @@ add_timing = sys.argv[4] == 'T'
 # Load and validate initial SDFG
 sdfg = SDFG.from_file(input_file)
 sdfg.validate()
+
+# Save the initial SDFG
+sdfg.save(input_file)
 
 # Apply Optimizations
 if opt_lvl == 1:
