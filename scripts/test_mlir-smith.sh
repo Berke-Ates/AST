@@ -26,11 +26,13 @@ end_seed=100
 timeout=5
 
 for ((seed = start_seed; seed <= end_seed; seed++)); do
+  echo -ne "Running test with seed: $seed\r"
+
   if ! timeout $timeout ./"$mlir_smith" --seed $seed >/dev/null 2>&1; then
-    echo "Crash or timeout with seed: $seed"
+    echo -e "\nCrash or timeout with seed: $seed"
     exit 1
   fi
 done
 
-echo "No crashes or timeouts found in the seed range"
+echo -e "\nNo crashes or timeouts found in the seed range"
 exit 0
