@@ -5,7 +5,7 @@
 
 # Check if a path to the tool was provided.
 if [ $# -ne 1 ]; then
-  echo "Usage: $0 <path_to_mlir-smith>"
+  echo "Usage: $0 <path to mlir-smith>"
   exit 1
 fi
 
