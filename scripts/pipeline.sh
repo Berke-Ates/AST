@@ -101,17 +101,40 @@ clang $opt_lvl_cc $flags "$output_dir"/"${input_name}".s \
 
 # Converting to SDFG Dialect
 sdfg-opt --convert-to-sdfg "$output_dir"/"${input_name}"_opt.mlir \
-  >"$output_dir"/"${input_name}"_sdfg.mlir
+  >"$output_dir"/"${input_name}"_dcir_sdfg.mlir
 
 # Translating to SDFG
-sdfg-translate --mlir-to-sdfg "$output_dir"/"${input_name}"_sdfg.mlir \
-  >"$output_dir"/"$input_name".sdfg
+sdfg-translate --mlir-to-sdfg "$output_dir"/"${input_name}"_dcir_sdfg.mlir \
+  >"$output_dir"/"$input_name"_dcir.sdfg
 
 # Optimizing data-centrically with DaCe
-python3 "$scripts_dir"/compile_sdfg.py "$output_dir"/"$input_name".sdfg \
-  "$output_dir"/"${input_name}"_opt.sdfg $opt_lvl_dc T
+python3 "$scripts_dir"/compile_sdfg.py "$output_dir"/"$input_name"_dcir.sdfg \
+  "$output_dir"/"${input_name}"_dcir_opt.sdfg $opt_lvl_dc T
 
 # Disassembling
-# NOTE: We assume that the SDFG is called sdfg_0 (should be the case with mlir-dace)
+# NOTE: We assume that the SDFG is called sdfg_0 (should be the case with
+# mlir-dace)
 obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
-objdump -d "$obj_file" >"$output_dir"/"${input_name}"_sdfg.s
+objdump -d "$obj_file" >"$output_dir"/"${input_name}"_dcir_sdfg.s
+
+##===----------------------------------------------------------------------===##
+## DaCe Pipeline
+##===----------------------------------------------------------------------===##
+
+# Converting to SDFG Dialect
+sdfg-opt --convert-to-sdfg "$mlir_file" \
+  >"$output_dir"/"${input_name}"_dace_sdfg.mlir
+
+# Translating to SDFG
+sdfg-translate --mlir-to-sdfg "$output_dir"/"${input_name}"_dace_sdfg.mlir \
+  >"$output_dir"/"$input_name"_dace.sdfg
+
+# Optimizing data-centrically with DaCe
+python3 "$scripts_dir"/compile_sdfg.py "$output_dir"/"$input_name"_dace.sdfg \
+  "$output_dir"/"${input_name}"_dace_opt.sdfg $opt_lvl_dc T
+
+# Disassembling
+# NOTE: We assume that the SDFG is called sdfg_0 (should be the case with
+# mlir-dace)
+obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
+objdump -d "$obj_file" >"$output_dir"/"${input_name}"_dace_sdfg.s
