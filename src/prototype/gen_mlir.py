@@ -90,7 +90,7 @@ class Variable():
 # The unranked dimension list specifies the unranked dimensions after allocations (from left to right)
 class MemrefVariable():
 
-    def __init__(self, name: str, v_type: Type, dimension_list: List[int], unranked_dimension_list: List):
+    def __init__(self, name: str, v_type: TypeMemref, dimension_list: List[int], unranked_dimension_list: List):
         self.name = name
         self.type = v_type
         self.dimension_list = dimension_list
@@ -178,6 +178,9 @@ class ForLoop():
     # ssa_vars[3]: step var
 
     def generate(mlir_obj, env: List[Variable]):
+
+        if(len(mlir_obj.call_stack) > mlir_obj.depth_limit):
+            return ""
 
         # output string
         output = ""
@@ -300,6 +303,9 @@ class ForLoop():
 
 class If():
     def generate(mlir_obj, env: List[Variable]):
+
+        if(len(mlir_obj.call_stack) > mlir_obj.depth_limit):
+            return ""
         
         # make a copy of env
         local_env = env.copy() 
@@ -401,6 +407,10 @@ class Condition():
 class WhileDo():
 
     def generate(mlir_obj, env: List):
+
+        if(len(mlir_obj.call_stack) > mlir_obj.depth_limit):
+            return ""
+        
         # Copy environment
         local_env = env.copy()
 
@@ -488,6 +498,7 @@ class MemrefLoad(Expression):
         output = ""
         # Generate/Choose memref variable
         potential_memref_vars = [var for var in env if isinstance(var, MemrefVariable)] # Get potential variables with memref type
+
         if random.random() < 0.75 and len(potential_memref_vars) > 0:
             memref_var = random.choice(potential_memref_vars)
         else:
@@ -498,11 +509,20 @@ class MemrefLoad(Expression):
         count_idx = len(memref_var.dimension_list)
         potential_indices_vars = [var for var in env if var.type.name == "index"]
         indices_list = []
+        ind_list_idx_ranked = 0
+        ind_list_idx_dynamic = 0
+
         while(len(indices_list) != count_idx):
             if random.random() > 0.75 and len(potential_indices_vars) > 0:
                 indices_list.append(random.choice(potential_indices_vars))
             else:
-                indices_list.append(random.randint(0,100))
+                upper = memref_var.dimension_list[ind_list_idx_ranked]
+                if(upper == -1):
+                    upper = memref_var.unranked_dimension_list[ind_list_idx_dynamic]
+                    ind_list_idx_dynamic += 1
+
+                ind_list_idx_ranked += 1
+                indices_list.append(random.randint(0, upper-1))
 
         # Create variable and add it to environment
         name = "var" + str(mlir_obj.global_scope_ctr)
@@ -533,7 +553,7 @@ class MemrefStore(Expression):
 
         output = ""
         # Generate/Choose memref variable
-        potential_memref_vars = [var for var in env if isinstance(var.type, TypeMemref)] # Get potential variables with memref type
+        potential_memref_vars = [var for var in env if isinstance(var, MemrefVariable)] # Get potential variables with memref type
 
         if random.random() > 0.75 and len(potential_memref_vars) > 0:
             memref_var = random.choice(potential_memref_vars)
@@ -542,7 +562,7 @@ class MemrefStore(Expression):
             memref_var = env[-1]
 
         # Find/Generate value
-        potential_value_vars = [var for var in env if var.type == memref_var.type]
+        potential_value_vars = [var for var in env if var.type == memref_var.type.type]
 
         if random.random() > 0.75 and len(potential_value_vars) > 0:
             value_var = random.choice(potential_value_vars)
@@ -559,11 +579,20 @@ class MemrefStore(Expression):
         count_idx = len(memref_var.dimension_list)
         potential_indices_vars = [var for var in env if var.type.name == "index"]
         indices_list = []
+        ind_list_idx_ranked = 0
+        ind_list_idx_dynamic = 0
+
         while(len(indices_list) != count_idx):
             if random.random() > 0.75 and len(potential_indices_vars) > 0:
                 indices_list.append(random.choice(potential_indices_vars))
             else:
-                indices_list.append(random.randint(0,100))
+                upper = memref_var.dimension_list[ind_list_idx_ranked]
+                if(upper == -1):
+                    upper = memref_var.unranked_dimension_list[ind_list_idx_dynamic]
+                    ind_list_idx_dynamic += 1
+
+                ind_list_idx_ranked += 1
+                indices_list.append(random.randint(0, upper-1))
 
         output += MemrefStore.emit(value_var, memref_var, indices_list)
         return output
@@ -604,8 +633,8 @@ class MemrefCast(Expression):
 
         output = ""
         # Pick/Generate memref variable
-        potential_memref_vars = [var for var in env if isinstance(var.type, TypeMemref)] # Get potential variables with memref type
-
+        potential_memref_vars = [var for var in env if isinstance(var, MemrefVariable)] # Get potential variables with memref type
+        print(potential_memref_vars)
         if len(potential_memref_vars) > 0:
             source_var = random.choice(potential_memref_vars)
         else:
@@ -618,6 +647,7 @@ class MemrefCast(Expression):
         
         # Create new memref type
         # .shape_cast() handles all details
+        print(source_var)
         dimension_list, unranked_dimension_list = mlir_obj.shape_cast(source_var.dimension_list, source_var.unranked_dimension_list)
 
         dest_memref_type = TypeMemref(dimension_list, source_var.type.type)
@@ -664,6 +694,9 @@ class MemrefDealloc(Expression):
         return f"memref.dealloc %{memref_var.name} : {memref_var.type.name} {nl}"
 
 class MLIRSmith():
+
+    # Depth limit
+    depth_limit = 3
 
     # Contains global variables in the module
     # Local variables are handled in their respective objects
@@ -848,25 +881,38 @@ class MLIRSmith():
         output = ""
 
         while (True):
-            p = random.randrange(90)
+            p = random.randrange(150)
 
-            # Define arith/math operations
+            # Generate arith/math operation
             if p < 80:
                 output_str, output_vars = self.generate_instruction_with_returntype(random.choice(self.typenames), local_env)
                 output += output_str
 
-            # Define memory alloc operation
-            elif p < 90:
-                output += MemrefCast.generate(self, local_env)
-
+            # Generate If
             elif p < 110:
                 output += If.generate(self, local_env)
 
+            # Generate ForLoop
             elif p < 120:
                 output += ForLoop.generate(self, local_env)
 
+            # Generate WhileDo
             elif p < 140:
                 output += WhileDo.generate(self, local_env)
+
+            # Generate memref operation
+            elif p < 150:
+                p = random.randrange(100)
+                if p < 50:
+                    output += MemrefVariable.generate(self, local_env)
+                elif p < 70:
+                    output += MemrefStore.generate(self, local_env)
+                elif p < 90: 
+                    output += MemrefLoad.generate(self, local_env)
+                elif p < 95:
+                    output += MemrefCast.generate(self, local_env)
+                else:
+                    output += MemrefDealloc.generate(self, local_env)
 
             # Check if we can generate a return Op
             available_return_types = [var.type for var in local_env]
@@ -887,7 +933,7 @@ class MLIRSmith():
                         if(len(return_type) > 0):
                             output += Expression.emit("func.return", return_obj, return_type)
                         else:
-                            output += f"func.return {nl}"
+                            output += f"func.return"
                     elif((self.call_stack[-1])[0] == "WhileDo" and (self.call_stack[-1])[1] == "Before"):
                         # Generate | Pick condition variable
                         p = random.random()
