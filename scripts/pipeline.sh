@@ -75,32 +75,34 @@ export PYTHONWARNINGS="ignore"
 ##===----------------------------------------------------------------------===##
 
 # Optimizing with MLIR
-mlir-opt --cse --inline "$mlir_file" >"$output_dir"/"${input_name}"_opt.mlir
+mlir-opt --cse --inline "$mlir_file" \
+  >"$output_dir"/"${input_name}"_mlir_opt.mlir
 
 # Lower to LLVM dialect
 mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
   --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts \
-  "$output_dir"/"${input_name}"_opt.mlir >"$output_dir"/"${input_name}"_ll.mlir
+  "$output_dir"/"${input_name}"_mlir_opt.mlir \
+  >"$output_dir"/"${input_name}"_mlir_ll.mlir
 
 # Translate
-mlir-translate --mlir-to-llvmir "$output_dir"/"${input_name}"_ll.mlir \
-  >"$output_dir"/"${input_name}".ll
+mlir-translate --mlir-to-llvmir "$output_dir"/"${input_name}"_mlir_ll.mlir \
+  >"$output_dir"/"${input_name}"_mlir.ll
 
 # Compile
-llc $opt_lvl_cc --relocation-model=pic "$output_dir"/"${input_name}".ll \
-  -o "$output_dir"/"${input_name}".s
+llc $opt_lvl_cc --relocation-model=pic "$output_dir"/"${input_name}"_mlir.ll \
+  -o "$output_dir"/"${input_name}"_mlir.s
 
 # Assemble
 # shellcheck disable=SC2086
-clang $opt_lvl_cc $flags "$output_dir"/"${input_name}".s \
-  -o "$output_dir"/"${input_name}".out -lm
+clang $opt_lvl_cc $flags "$output_dir"/"${input_name}"_mlir.s \
+  -o "$output_dir"/"${input_name}"_mlir.out -lm
 
 ##===----------------------------------------------------------------------===##
 ## DCIR Pipeline
 ##===----------------------------------------------------------------------===##
 
 # Converting to SDFG Dialect
-sdfg-opt --convert-to-sdfg "$output_dir"/"${input_name}"_opt.mlir \
+sdfg-opt --convert-to-sdfg "$output_dir"/"${input_name}"_mlir_opt.mlir \
   >"$output_dir"/"${input_name}"_dcir_sdfg.mlir
 
 # Translating to SDFG
