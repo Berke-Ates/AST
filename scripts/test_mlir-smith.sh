@@ -20,7 +20,7 @@ fi
 
 # The range of seeds to test.
 start_seed=0
-end_seed=100
+end_seed=1000
 
 # The timeout in seconds.
 timeout=5
@@ -28,8 +28,13 @@ timeout=5
 for ((seed = start_seed; seed <= end_seed; seed++)); do
   echo -ne "Running test with seed: $seed\r"
 
-  if ! timeout $timeout ./"$mlir_smith" --seed $seed >/dev/null 2>&1; then
-    echo -e "\nCrash or timeout with seed: $seed"
+  timeout $timeout ./"$mlir_smith" --seed $seed >/dev/null 2>&1
+  result=$?
+  if [ $result -eq 124 ]; then
+    echo -e "\nTimeout with seed: $seed"
+    exit 1
+  elif [ $result -ne 0 ]; then
+    echo -e "\nCrash with seed: $seed"
     exit 1
   fi
 done
