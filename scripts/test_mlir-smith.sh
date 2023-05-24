@@ -1,20 +1,26 @@
 #!/bin/bash
 
-# This script runs mlir-smith with multiple seeds and reports any crashes or
-# timeouts
+# This script runs mlir-smith with multiple seeds and reports any crashes,
+# timeouts or invalid outputs
 
-# Check if a path to the tool was provided.
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <path to mlir-smith>"
+# Check if a path to the tools was provided.
+if [ $# -ne 2 ]; then
+  echo "Usage: $0 <path to mlir-smith> <path to mlir-opt>"
   exit 1
 fi
 
-# The path to the tool.
+# The paths to the tools.
 mlir_smith=$1
+mlir_opt=$2
 
-# Check if the tool exists and is executable.
+# Check if the tools exist and are executable.
 if [ ! -x "$mlir_smith" ]; then
   echo "Error: mlir-smith does not exist at '$mlir_smith' or is not executable."
+  exit 1
+fi
+
+if [ ! -x "$mlir_opt" ]; then
+  echo "Error: mlir-opt does not exist at '$mlir_opt' or is not executable."
   exit 1
 fi
 
@@ -28,16 +34,33 @@ timeout=5
 for ((seed = start_seed; seed <= end_seed; seed++)); do
   echo -ne "Running test with seed: $seed\r"
 
-  timeout $timeout ./"$mlir_smith" --seed $seed >/dev/null 2>&1
+  # Create a temporary file to store the output of mlir-smith
+  temp_file=$(mktemp)
+
+  timeout $timeout ./"$mlir_smith" --seed $seed >"$temp_file" 2>&1
   result=$?
   if [ $result -eq 124 ]; then
     echo -e "\nTimeout with seed: $seed"
+    rm "$temp_file"
     exit 1
   elif [ $result -ne 0 ]; then
     echo -e "\nCrash with seed: $seed"
+    rm "$temp_file"
     exit 1
+  else
+    # If mlir-smith did not crash or timeout, feed the output to mlir-opt
+    ./"$mlir_opt" <"$temp_file" >/dev/null 2>&1
+    result=$?
+    if [ $result -ne 0 ]; then
+      echo -e "\nmlir-opt failed with seed: $seed"
+      rm "$temp_file"
+      exit 1
+    fi
   fi
+
+  # Remove the temporary file
+  rm "$temp_file"
 done
 
-echo -e "\nNo crashes or timeouts found in the seed range"
+echo -e "\nNo crashes, timeouts, or failures found in the seed range"
 exit 0
