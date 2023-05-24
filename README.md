@@ -15,8 +15,6 @@ registering new dialects.
 * Ensures the generation of well-formed and semantically valid MLIR code.
 * Provides a variety of configuration options for controlling the complexity and
  scope of the generated code.
-* (Automatically generates test harnesses, enabling seamless integration with 
-testing frameworks)
 
 ## Getting Started
 To start using MLIRsmith, follow these steps:
@@ -132,13 +130,11 @@ Once MLIRsmith is built, you can run it with the following command:
 
 The available options include:
 
-* `-p, --show-dialects`: Print the list of registered dialects
-* `-d, --dialects`: A comma-separated list of dialects to generate code for.
-* `-n, --num-tests`: The number of test cases to generate (default: 1).
-* `-o, --output`: The output directory for the generated code (default: current 
+* `---dump`: Dump the used configuration.
+* `-o`: The output directory for the generated code (default: current 
 directory).
-* `-s, --seed`: The seed for the random number generator (default: system time).
-* `-c, --config`: The path to a configuration file with additional options.
+* `--seed`: The seed for the random number generator (default: system time).
+* `-c`: The path to a configuration file with additional options.
 
 
 ## File Structure
