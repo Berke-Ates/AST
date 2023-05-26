@@ -1,8 +1,13 @@
 #!/bin/bash
 
+# Be safe
+set -e          # Fail script when subcommand fails
+set -u          # Disallow using undefined variables
+set -o pipefail # Prevent errors from being masked
+
 # Check if at least two arguments are provided
 if [ $# -lt 2 ]; then
-  echo "Usage: $0 file1.s file2.s [file3.s ...]"
+  echo "Usage: $0 <file1.s> <file2.s> [<file3.s> ...]"
   exit 1
 fi
 
@@ -17,7 +22,8 @@ shift
 
 # Iterate over the rest of the assembly files
 for file in "$@"; do
-  # Create another temporary file to store the function calls of the current assembly file
+  # Create another temporary file to store the function calls of the current
+  # assembly file
   tempfile2=$(mktemp)
 
   # Extract the function calls of the current assembly file

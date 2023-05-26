@@ -61,7 +61,8 @@ for ((seed = start_seed; seed <= end_seed; seed++)); do
     fi
   fi
 
-  # Check for the occurrence of operation names and remove them from the array if found
+  # Check for the occurrence of operation names and remove them from the array
+  # if found
   for op in "${ops[@]}"; do
     if grep -q "$op" "$temp_file"; then
       # Remove the operation from the array
