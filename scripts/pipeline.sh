@@ -39,6 +39,22 @@ check_tool python3
 check_tool llc
 check_tool objdump
 
+missing_submodules=0
+
+# Check each submodule
+while read -r path; do
+  if [[ ! -d "$path" ]]; then
+    echo "Submodule $path is missing"
+    missing_submodules=$((missing_submodules + 1))
+  fi
+done < <(git config --file .gitmodules --get-regexp path | awk '{ print $2 }')
+
+# Check if any submodules are missing
+if [[ $missing_submodules -gt 0 ]]; then
+  echo "Some submodules are missing!"
+  exit 1
+fi
+
 # Create output directory
 if [ ! -d "$output_dir" ]; then
   mkdir -p "$output_dir"
@@ -66,7 +82,7 @@ export CXX
 export DACE_compiler_cpu_openmp_sections=0
 export DACE_instrumentation_report_each_invocation=0
 export DACE_compiler_cpu_args="$flags $opt_lvl_cc"
-export DACE_default_build_folder="$output_dir"/.dacecache
+export DACE_include_folder="$scripts_dir"/../dace/dace/runtime/include
 # export DACE_debugprint=verbose # for debugging
 export PYTHONWARNINGS="ignore"
 
@@ -144,14 +160,15 @@ clang $opt_lvl_cc $flags "$funcs_lib" "$llvm_dir"/"${input_name}".s \
 ## DCIR Pipeline
 ##===----------------------------------------------------------------------===##
 
-# Clear DaCe cache
-rm -rf "$DACE_default_build_folder"
-
 # Create subfolder
 dcir_dir="$output_dir"/dcir
 if [ ! -d "$dcir_dir" ]; then
   mkdir -p "$dcir_dir"
 fi
+
+# Clear DaCe cache
+export DACE_default_build_folder="$dcir_dir"/.dacecache
+rm -rf "$DACE_default_build_folder"
 
 # Converting to SDFG Dialect
 sdfg-opt --convert-to-sdfg "$mlir_dir"/"${input_name}"_opt.mlir \
@@ -171,18 +188,26 @@ python3 "$scripts_dir"/compile_sdfg.py "$dcir_dir"/"$input_name".sdfg \
 obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
 objdump -d "$obj_file" >"$dcir_dir"/"${input_name}".s
 
+# Compile
+cp "$DACE_default_build_folder"/sdfg_0/build/libsdfg_0.so "$dcir_dir"
+# shellcheck disable=SC2086
+clang++ $opt_lvl_cc $flags -I "$DACE_include_folder" \
+  "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp \
+  "$dcir_dir"/libsdfg_0.so -o "$dcir_dir"/"${input_name}".out -lm
+
 ##===----------------------------------------------------------------------===##
 ## DaCe Pipeline
 ##===----------------------------------------------------------------------===##
-
-# Clear DaCe cache
-rm -rf "$DACE_default_build_folder"
 
 # Create subfolder
 dace_dir="$output_dir"/dace
 if [ ! -d "$dace_dir" ]; then
   mkdir -p "$dace_dir"
 fi
+
+# Clear DaCe cache
+export DACE_default_build_folder="$dace_dir"/.dacecache
+rm -rf "$DACE_default_build_folder"
 
 # Converting to SDFG Dialect
 sdfg-opt --convert-to-sdfg "$mlir_file" >"$dace_dir"/"${input_name}".mlir
@@ -200,3 +225,10 @@ python3 "$scripts_dir"/compile_sdfg.py "$dace_dir"/"$input_name".sdfg \
 # mlir-dace)
 obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
 objdump -d "$obj_file" >"$dace_dir"/"${input_name}".s
+
+# Compile
+cp "$DACE_default_build_folder"/sdfg_0/build/libsdfg_0.so "$dace_dir"
+# shellcheck disable=SC2086
+clang++ $opt_lvl_cc $flags -I "$DACE_include_folder" \
+  "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp \
+  "$dace_dir"/libsdfg_0.so -o "$dace_dir"/"${input_name}".out -lm
