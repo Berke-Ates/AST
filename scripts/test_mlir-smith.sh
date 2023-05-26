@@ -35,7 +35,7 @@ timeout=5
 mapfile -t ops < <("$mlir_smith" --dump | awk -F' = ' '{print $1}' | grep '\.')
 
 for ((seed = start_seed; seed <= end_seed; seed++)); do
-  echo -ne "Unseen operations: ${#ops[@]}, running with seed: $seed\r"
+  echo -ne "Unseen operations: ${#ops[@]}, running with seed: $seed \r"
 
   # Create a temporary file to store the output of mlir-smith
   temp_file=$(mktemp)
