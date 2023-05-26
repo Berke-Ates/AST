@@ -77,6 +77,8 @@ export PYTHONWARNINGS="ignore"
 funcs_lib="$output_dir"/funcs.o
 "$scripts_dir"/gen_ext_func.sh "$mlir_file" "$output_dir"/funcs.c
 clang -c "$output_dir"/funcs.c -o "$funcs_lib"
+absolute_path_funcs_lib=$(realpath "$funcs_lib")
+export DACE_compiler_cpu_libs="$absolute_path_funcs_lib"
 
 ##===----------------------------------------------------------------------===##
 ## MLIR Pipeline
@@ -186,7 +188,7 @@ fi
 sdfg-opt --convert-to-sdfg "$mlir_file" >"$dace_dir"/"${input_name}".mlir
 
 # Translating to SDFG
-sdfg-translate --mlidr-to-sdfg "$dace_dir"/"${input_name}".mlir \
+sdfg-translate --mlir-to-sdfg "$dace_dir"/"${input_name}".mlir \
   >"$dace_dir"/"$input_name".sdfg
 
 # Optimizing data-centrically with DaCe
