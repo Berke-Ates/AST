@@ -74,28 +74,61 @@ export PYTHONWARNINGS="ignore"
 ## MLIR Pipeline
 ##===----------------------------------------------------------------------===##
 
+# Create subfolder
+mlir_dir="$output_dir"/mlir
+if [ ! -d "$mlir_dir" ]; then
+  mkdir -p "$mlir_dir"
+fi
+
 # Optimizing with MLIR
-mlir-opt --cse --inline "$mlir_file" \
-  >"$output_dir"/"${input_name}"_mlir_opt.mlir
+mlir-opt --cse --inline "$mlir_file" >"$mlir_dir"/"${input_name}"_opt.mlir
 
 # Lower to LLVM dialect
 mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
   --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts \
-  "$output_dir"/"${input_name}"_mlir_opt.mlir \
-  >"$output_dir"/"${input_name}"_mlir_ll.mlir
+  "$mlir_dir"/"${input_name}"_opt.mlir \
+  >"$mlir_dir"/"${input_name}"_ll.mlir
 
 # Translate
-mlir-translate --mlir-to-llvmir "$output_dir"/"${input_name}"_mlir_ll.mlir \
-  >"$output_dir"/"${input_name}"_mlir.ll
+mlir-translate --mlir-to-llvmir "$mlir_dir"/"${input_name}"_ll.mlir \
+  >"$mlir_dir"/"${input_name}".ll
 
 # Compile
-llc $opt_lvl_cc --relocation-model=pic "$output_dir"/"${input_name}"_mlir.ll \
-  -o "$output_dir"/"${input_name}"_mlir.s
+llc $opt_lvl_cc --relocation-model=pic "$mlir_dir"/"${input_name}".ll \
+  -o "$mlir_dir"/"${input_name}".s
 
 # Assemble
 # shellcheck disable=SC2086
-clang $opt_lvl_cc $flags "$output_dir"/"${input_name}"_mlir.s \
-  -o "$output_dir"/"${input_name}"_mlir.out -lm
+clang $opt_lvl_cc $flags "$mlir_dir"/"${input_name}".s \
+  -o "$mlir_dir"/"${input_name}".out -lm
+
+##===----------------------------------------------------------------------===##
+## LLVM Pipeline
+##===----------------------------------------------------------------------===##
+
+# Create subfolder
+llvm_dir="$output_dir"/llvm
+if [ ! -d "$llvm_dir" ]; then
+  mkdir -p "$llvm_dir"
+fi
+
+# Lower to LLVM dialect
+mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
+  --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts \
+  "$mlir_file" >"$llvm_dir"/"${input_name}"_ll.mlir
+
+# Translate
+mlir-translate --mlir-to-llvmir "$llvm_dir"/"${input_name}"_ll.mlir \
+  >"$llvm_dir"/"${input_name}".ll
+
+# Compile
+llc $opt_lvl_cc --relocation-model=pic "$llvm_dir"/"${input_name}".ll \
+  -o "$llvm_dir"/"${input_name}".s
+
+# Assemble
+# shellcheck disable=SC2086
+clang $opt_lvl_cc $flags "$llvm_dir"/"${input_name}".s \
+  -o "$llvm_dir"/"${input_name}".out -lm
 
 ##===----------------------------------------------------------------------===##
 ## DCIR Pipeline
@@ -104,23 +137,29 @@ clang $opt_lvl_cc $flags "$output_dir"/"${input_name}"_mlir.s \
 # Clear DaCe cache
 rm -rf "$DACE_default_build_folder"
 
+# Create subfolder
+dcir_dir="$output_dir"/dcir
+if [ ! -d "$dcir_dir" ]; then
+  mkdir -p "$dcir_dir"
+fi
+
 # Converting to SDFG Dialect
-sdfg-opt --convert-to-sdfg "$output_dir"/"${input_name}"_mlir_opt.mlir \
-  >"$output_dir"/"${input_name}"_dcir_sdfg.mlir
+sdfg-opt --convert-to-sdfg "$mlir_dir"/"${input_name}"_opt.mlir \
+  >"$dcir_dir"/"${input_name}".mlir
 
 # Translating to SDFG
-sdfg-translate --mlir-to-sdfg "$output_dir"/"${input_name}"_dcir_sdfg.mlir \
-  >"$output_dir"/"$input_name"_dcir.sdfg
+sdfg-translate --mlir-to-sdfg "$dcir_dir"/"${input_name}".mlir \
+  >"$dcir_dir"/"$input_name".sdfg
 
 # Optimizing data-centrically with DaCe
-python3 "$scripts_dir"/compile_sdfg.py "$output_dir"/"$input_name"_dcir.sdfg \
-  "$output_dir"/"${input_name}"_dcir_opt.sdfg $opt_lvl_dc T
+python3 "$scripts_dir"/compile_sdfg.py "$dcir_dir"/"$input_name".sdfg \
+  "$dcir_dir"/"${input_name}"_opt.sdfg $opt_lvl_dc T
 
 # Disassembling
 # NOTE: We assume that the SDFG is called sdfg_0 (should be the case with
 # mlir-dace)
 obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
-objdump -d "$obj_file" >"$output_dir"/"${input_name}"_dcir_sdfg.s
+objdump -d "$obj_file" >"$dcir_dir"/"${input_name}".s
 
 ##===----------------------------------------------------------------------===##
 ## DaCe Pipeline
@@ -129,20 +168,25 @@ objdump -d "$obj_file" >"$output_dir"/"${input_name}"_dcir_sdfg.s
 # Clear DaCe cache
 rm -rf "$DACE_default_build_folder"
 
+# Create subfolder
+dace_dir="$output_dir"/dace
+if [ ! -d "$dace_dir" ]; then
+  mkdir -p "$dace_dir"
+fi
+
 # Converting to SDFG Dialect
-sdfg-opt --convert-to-sdfg "$mlir_file" \
-  >"$output_dir"/"${input_name}"_dace_sdfg.mlir
+sdfg-opt --convert-to-sdfg "$mlir_file" >"$dace_dir"/"${input_name}".mlir
 
 # Translating to SDFG
-sdfg-translate --mlir-to-sdfg "$output_dir"/"${input_name}"_dace_sdfg.mlir \
-  >"$output_dir"/"$input_name"_dace.sdfg
+sdfg-translate --mlir-to-sdfg "$dace_dir"/"${input_name}".mlir \
+  >"$dace_dir"/"$input_name".sdfg
 
 # Optimizing data-centrically with DaCe
-python3 "$scripts_dir"/compile_sdfg.py "$output_dir"/"$input_name"_dace.sdfg \
-  "$output_dir"/"${input_name}"_dace_opt.sdfg $opt_lvl_dc T
+python3 "$scripts_dir"/compile_sdfg.py "$dace_dir"/"$input_name".sdfg \
+  "$dace_dir"/"${input_name}"_opt.sdfg $opt_lvl_dc T
 
 # Disassembling
 # NOTE: We assume that the SDFG is called sdfg_0 (should be the case with
 # mlir-dace)
 obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
-objdump -d "$obj_file" >"$output_dir"/"${input_name}"_dace_sdfg.s
+objdump -d "$obj_file" >"$dace_dir"/"${input_name}".s
