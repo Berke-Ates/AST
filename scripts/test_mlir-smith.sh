@@ -26,7 +26,7 @@ fi
 
 # The range of seeds to test.
 start_seed=0
-end_seed=1000
+end_seed=10000
 
 # The timeout in seconds.
 timeout=5
@@ -35,7 +35,7 @@ timeout=5
 mapfile -t ops < <("$mlir_smith" --dump | awk -F' = ' '{print $1}' | grep '\.')
 
 for ((seed = start_seed; seed <= end_seed; seed++)); do
-  echo -ne "Running test with seed: $seed\r"
+  echo -ne "Unseen operations: ${#ops[@]}, running with seed: $seed\r"
 
   # Create a temporary file to store the output of mlir-smith
   temp_file=$(mktemp)
