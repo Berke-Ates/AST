@@ -71,6 +71,14 @@ export DACE_default_build_folder="$output_dir"/.dacecache
 export PYTHONWARNINGS="ignore"
 
 ##===----------------------------------------------------------------------===##
+## External functions generation
+##===----------------------------------------------------------------------===##
+
+funcs_lib="$output_dir"/funcs.o
+"$scripts_dir"/gen_ext_func.sh "$mlir_file" "$output_dir"/funcs.c
+clang -c "$output_dir"/funcs.c -o "$funcs_lib"
+
+##===----------------------------------------------------------------------===##
 ## MLIR Pipeline
 ##===----------------------------------------------------------------------===##
 
@@ -99,7 +107,7 @@ llc $opt_lvl_cc --relocation-model=pic "$mlir_dir"/"${input_name}".ll \
 
 # Assemble
 # shellcheck disable=SC2086
-clang $opt_lvl_cc $flags "$mlir_dir"/"${input_name}".s \
+clang $opt_lvl_cc $flags "$funcs_lib" "$mlir_dir"/"${input_name}".s \
   -o "$mlir_dir"/"${input_name}".out -lm
 
 ##===----------------------------------------------------------------------===##
@@ -127,7 +135,7 @@ llc $opt_lvl_cc --relocation-model=pic "$llvm_dir"/"${input_name}".ll \
 
 # Assemble
 # shellcheck disable=SC2086
-clang $opt_lvl_cc $flags "$llvm_dir"/"${input_name}".s \
+clang $opt_lvl_cc $flags "$funcs_lib" "$llvm_dir"/"${input_name}".s \
   -o "$llvm_dir"/"${input_name}".out -lm
 
 ##===----------------------------------------------------------------------===##
@@ -178,7 +186,7 @@ fi
 sdfg-opt --convert-to-sdfg "$mlir_file" >"$dace_dir"/"${input_name}".mlir
 
 # Translating to SDFG
-sdfg-translate --mlir-to-sdfg "$dace_dir"/"${input_name}".mlir \
+sdfg-translate --mlidr-to-sdfg "$dace_dir"/"${input_name}".mlir \
   >"$dace_dir"/"$input_name".sdfg
 
 # Optimizing data-centrically with DaCe
