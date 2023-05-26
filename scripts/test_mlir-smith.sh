@@ -31,6 +31,9 @@ end_seed=1000
 # The timeout in seconds.
 timeout=5
 
+# Get the operation names from the output of mlir-smith --dump
+mapfile -t ops < <("$mlir_smith" --dump | awk -F' = ' '{print $1}' | grep '\.')
+
 for ((seed = start_seed; seed <= end_seed; seed++)); do
   echo -ne "Running test with seed: $seed\r"
 
@@ -58,9 +61,30 @@ for ((seed = start_seed; seed <= end_seed; seed++)); do
     fi
   fi
 
+  # Check for the occurrence of operation names and remove them from the array if found
+  for op in "${ops[@]}"; do
+    if grep -q "$op" "$temp_file"; then
+      # Remove the operation from the array
+      for index in "${!ops[@]}"; do
+        if [[ ${ops[$index]} = "$op" ]]; then
+          unset 'ops[index]'
+        fi
+      done
+    fi
+  done
+
   # Remove the temporary file
   rm "$temp_file"
 done
 
-echo -e "\nNo crashes, timeouts, or failures found in the seed range"
+# Check if the array is empty
+if [ ${#ops[@]} -eq 0 ]; then
+  echo -e "\nAll operations occurred in the seed range"
+else
+  echo -e "\nThe following operations did not occur:"
+  for op in "${ops[@]}"; do
+    echo "$op"
+  done
+fi
+
 exit 0
