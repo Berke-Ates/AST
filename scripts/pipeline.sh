@@ -134,7 +134,7 @@ export PYTHONWARNINGS="ignore"
 ## External functions generation
 ##===----------------------------------------------------------------------===##
 add_log_section "External Functions Generation"
-printf "\n"
+printf "\n" >>"$log_file"
 exec >>"$log_file" 2>&1 # Redirect the output to the log file
 set -x
 
@@ -150,7 +150,7 @@ set +x
 ## MLIR Pipeline
 ##===----------------------------------------------------------------------===##
 add_log_section "MLIR Pipeline"
-printf "\n"
+printf "\n" >>"$log_file"
 
 # Create subfolder
 mlir_dir="$output_dir"/mlir
@@ -190,7 +190,7 @@ set +x
 ## LLVM Pipeline
 ##===----------------------------------------------------------------------===##
 add_log_section "LLVM Pipeline"
-printf "\n"
+printf "\n" >>"$log_file"
 
 # Create subfolder
 llvm_dir="$output_dir"/llvm
@@ -226,7 +226,7 @@ set +x
 ## DCIR Pipeline
 ##===----------------------------------------------------------------------===##
 add_log_section "DCIR Pipeline"
-printf "\n"
+printf "\n" >>"$log_file"
 
 # Create subfolder
 dcir_dir="$output_dir"/dcir
@@ -273,7 +273,7 @@ set +x
 ## DaCe Pipeline
 ##===----------------------------------------------------------------------===##
 add_log_section "DaCe Pipeline"
-printf "\n"
+printf "\n" >>"$log_file"
 
 # Create subfolder
 dace_dir="$output_dir"/dace
