@@ -20,11 +20,13 @@ if [ ! -d "$output_dir" ]; then
   mkdir -p "$output_dir"
 fi
 
-compilation_error_dir="$output_dir"/compilation_error
+comp_err_dir="$output_dir"/comp_err_dir
+exe_diff_dir="$output_dir"/exe_diff
 flag_diff_dir="$output_dir"/flag_diff
 normal_dir="$output_dir"/normal
 
-mkdir -p "$compilation_error_dir"
+mkdir -p "$comp_err_dir"
+mkdir -p "$exe_diff_dir"
 mkdir -p "$flag_diff_dir"
 mkdir -p "$normal_dir"
 
@@ -45,11 +47,32 @@ for ((i = 0; i <= 10; i++)); do
     fi
   done
 
+  # Generate binaries
   if ! "$scripts_dir"/pipeline.sh "$mlir_file" "$subdir"; then
-    mv "$subdir" "$compilation_error_dir"
+    mv "$subdir" "$comp_err_dir"
     continue
   fi
 
+  # Compare outputs
+  binaries=("$subdir"/llvm/input.out "$subdir"/mlir/input.out "$subdir"/dace/input.out "$subdir"/dcir/input.out)
+
+  first_output=""
+  first_exit_status=0
+
+  for binary in "${binaries[@]}"; do
+    output=$(timeout 10s "$binary")
+    exit_status=$?
+
+    if [ -z "$first_output" ]; then
+      first_output="$output"
+      first_exit_status="$exit_status"
+    elif [ "$output" != "$first_output" ] || [ "$exit_status" != "$first_exit_status" ]; then
+      mv "$subdir" "$exe_diff_dir"
+      continue 2
+    fi
+  done
+
+  # Compare flags
   if ! "$scripts_dir"/cmp_asm.sh "$subdir"/llvm/input.s "$subdir"/mlir/input.s "$subdir"/dcir/input.s "$subdir"/dace/input.s; then
     mv "$subdir" "$flag_diff_dir"
     continue
