@@ -260,6 +260,13 @@ python3 "$scripts_dir"/compile_sdfg.py "$dcir_dir"/"$input_name".sdfg \
 obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
 objdump -d "$obj_file" >"$dcir_dir"/"${input_name}".s
 
+# Rewrite to return the return type
+sed -i '/free(_arg0);/d' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+sed -i '/return 0;/d' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+sed -i '/}/i\int val = *_arg0;' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+sed -i '/int val = \*_arg0;/a\free(_arg0);' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+sed -i '/free(_arg0);/a\return val;' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+
 # Compile
 cp "$DACE_default_build_folder"/sdfg_0/build/libsdfg_0.so "$dcir_dir"
 # shellcheck disable=SC2086
@@ -305,6 +312,13 @@ python3 "$scripts_dir"/compile_sdfg.py "$dace_dir"/"$input_name".sdfg \
 # mlir-dace)
 obj_file=$(find "$DACE_default_build_folder" -iname sdfg_0.cpp.o)
 objdump -d "$obj_file" >"$dace_dir"/"${input_name}".s
+
+# Rewrite to return the return type
+sed -i '/free(_arg0);/d' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+sed -i '/return 0;/d' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+sed -i '/}/i\int val = *_arg0;' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+sed -i '/int val = \*_arg0;/a\free(_arg0);' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
+sed -i '/free(_arg0);/a\return val;' "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp
 
 # Compile
 cp "$DACE_default_build_folder"/sdfg_0/build/libsdfg_0.so "$dace_dir"

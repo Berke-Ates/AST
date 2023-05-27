@@ -33,7 +33,15 @@ mkdir -p "$normal_dir"
 # Helpers
 scripts_dir=$(dirname "$0")
 
+# Initialize counters
+comp_errs=0
+exe_diffs=0
+flag_diffs=0
+normals=0
+
 for ((i = 0; i <= 10; i++)); do
+  echo -ne "Run: $i, Compilation errors: $comp_errs, Execution differences: $exe_diffs, Flag differences: $flag_diffs, Normal runs: $normals\r"
+
   subdir="$output_dir"/smith_$i
   mkdir -p "$subdir"
   mlir_file="$subdir"/input.mlir
@@ -50,6 +58,7 @@ for ((i = 0; i <= 10; i++)); do
   # Generate binaries
   if ! "$scripts_dir"/pipeline.sh "$mlir_file" "$subdir"; then
     mv "$subdir" "$comp_err_dir"
+    ((comp_errs++))
     continue
   fi
 
@@ -60,14 +69,25 @@ for ((i = 0; i <= 10; i++)); do
   first_exit_status=0
 
   for binary in "${binaries[@]}"; do
-    output=$(timeout 10s "$binary")
-    exit_status=$?
+    # Change to the binary's directory
+    pushd "$(dirname "$binary")" >/dev/null || exit 1
+
+    timeout 10s ./input.out &>out.txt
+    echo "Exit status: $?" >>out.txt
+
+    # Read the output and exit status from out.txt
+    output=$(cat out.txt)
+    exit_status=$(tail -n 1 out.txt | awk '{print $3}')
+
+    # Change back to the original directory
+    popd >/dev/null || exit 1
 
     if [ -z "$first_output" ]; then
       first_output="$output"
       first_exit_status="$exit_status"
     elif [ "$output" != "$first_output" ] || [ "$exit_status" != "$first_exit_status" ]; then
       mv "$subdir" "$exe_diff_dir"
+      ((exe_diffs++))
       continue 2
     fi
   done
@@ -75,8 +95,12 @@ for ((i = 0; i <= 10; i++)); do
   # Compare flags
   if ! "$scripts_dir"/cmp_asm.sh "$subdir"/llvm/input.s "$subdir"/mlir/input.s "$subdir"/dcir/input.s "$subdir"/dace/input.s; then
     mv "$subdir" "$flag_diff_dir"
+    ((flag_diffs++))
     continue
   fi
 
   mv "$subdir" "$normal_dir"
+  ((normals++))
 done
+
+echo -e "Run: $i, Compilation errors: $comp_errs, Execution differences: $exe_diffs, Flag differences: $flag_diffs, Normal runs: $normals"
