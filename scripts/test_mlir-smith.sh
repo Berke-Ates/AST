@@ -3,6 +3,9 @@
 # This script runs mlir-smith with multiple seeds and reports any crashes,
 # timeouts or invalid outputs
 
+# Be safe
+set -u # Disallow using undefined variables
+
 # Check if a path to the tools was provided.
 if [ $# -ne 2 ]; then
   echo "Usage: $0 <path to mlir-smith> <path to mlir-opt>"

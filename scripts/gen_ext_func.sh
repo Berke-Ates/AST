@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script generates a C file, defining all external functions in a MLIR file
+
 # Be safe
 set -e          # Fail script when subcommand fails
 set -u          # Disallow using undefined variables

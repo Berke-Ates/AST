@@ -2,6 +2,9 @@
 
 # This script runs mlir-smith searches for a seed generating a specific output
 
+# Be safe
+set -u # Disallow using undefined variables
+
 # Check if a path to the tool was provided.
 if [ $# -ne 2 ]; then
   echo "Usage: $0 <path to mlir-smith> <word to grep>"

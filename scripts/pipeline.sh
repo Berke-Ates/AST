@@ -135,8 +135,8 @@ export PYTHONWARNINGS="ignore"
 ##===----------------------------------------------------------------------===##
 add_log_section "External Functions Generation"
 printf "\n"
-set -x
 exec >>"$log_file" 2>&1 # Redirect the output to the log file
+set -x
 
 funcs_lib="$output_dir"/funcs.o
 "$scripts_dir"/gen_ext_func.sh "$mlir_file" "$output_dir"/funcs.c
@@ -159,8 +159,8 @@ if [ ! -d "$mlir_dir" ]; then
 fi
 
 # Logging
-set -x
 exec >>"$log_file" 2>&1 # Redirect the output to the log file
+set -x
 
 # Optimizing with MLIR
 mlir-opt --cse --inline "$mlir_file" >"$mlir_dir"/"${input_name}"_opt.mlir
@@ -199,8 +199,8 @@ if [ ! -d "$llvm_dir" ]; then
 fi
 
 # Logging
-set -x
 exec >>"$log_file" 2>&1 # Redirect the output to the log file
+set -x
 
 # Lower to LLVM dialect
 mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
@@ -235,8 +235,8 @@ if [ ! -d "$dcir_dir" ]; then
 fi
 
 # Logging
-set -x
 exec >>"$log_file" 2>&1 # Redirect the output to the log file
+set -x
 
 # Clear DaCe cache
 export DACE_default_build_folder="$dcir_dir"/.dacecache
@@ -282,8 +282,8 @@ if [ ! -d "$dace_dir" ]; then
 fi
 
 # Logging
-set -x
 exec >>"$log_file" 2>&1 # Redirect the output to the log file
+set -x
 
 # Clear DaCe cache
 export DACE_default_build_folder="$dace_dir"/.dacecache
