@@ -31,12 +31,19 @@ mkdir -p "$normal_dir"
 # Helpers
 scripts_dir=$(dirname "$0")
 
-for ((i = 0; i <= 100; i++)); do
+for ((i = 0; i <= 10; i++)); do
   subdir="$output_dir"/smith_$i
   mkdir -p "$subdir"
   mlir_file="$subdir"/input.mlir
 
-  $mlir_smith -o "$mlir_file"
+  # Generate an MLIR file using mlir-smith until it contains 'func private'
+  # (external call)
+  while true; do
+    $mlir_smith -o "$mlir_file"
+    if grep -q 'func private' "$mlir_file"; then
+      break
+    fi
+  done
 
   if ! "$scripts_dir"/pipeline.sh "$mlir_file" "$subdir"; then
     mv "$subdir" "$compilation_error_dir"
