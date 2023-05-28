@@ -6,14 +6,20 @@
 set -u # Disallow using undefined variables
 
 # Check args
-if [ $# -ne 2 ]; then
-  echo "Usage: ./smith.sh <Path to mlir-smith> <Output Dir>"
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+  echo "Usage: ./smith.sh <Path to mlir-smith> <Output Dir> [<Config File>]"
   exit 1
 fi
 
 # Read args
 mlir_smith=$1
 output_dir=$2
+
+if [ $# -eq 3 ]; then
+  config_file=$3
+else
+  config_file=""
+fi
 
 # Create output directory
 if [ ! -d "$output_dir" ]; then
@@ -49,7 +55,7 @@ for ((i = 0; i <= 10; i++)); do
   # Generate an MLIR file using mlir-smith until it contains 'func private'
   # (external call)
   while true; do
-    $mlir_smith -o "$mlir_file"
+    $mlir_smith -o "$mlir_file" -c "$config_file"
     if grep -q 'func private' "$mlir_file"; then
       break
     fi
