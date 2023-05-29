@@ -1,0 +1,13 @@
+- Primitives that follow the scheme <dialect.op [vars] : [types]> should be modeled as expressions.
+Maybe in the actual implementation each of these should be modeled as a inherited subtype of Expression.
+Examples:
+scf.yield %x : i32
+arith.addi %x, %y : i32
+memref.dealloc %0 : memref<8x64xf32>
+
+- Attributes not implemented
+
+- Memref inherits Type and should therefore be used like a type
+
+- Memref operations inherit Expression
+

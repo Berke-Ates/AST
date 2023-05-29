@@ -1,0 +1,18 @@
+[x]: Resolved
+[-]: Todo
+
+[x] Loop termination
+Fix: Timing restriction on execution
+
+[x] For loop integer vs. index case
+Fix: index_case bool in class to determine which one to use
+
+[x] Arith.constant cannot be modeled as it does not follow the usual expression scheme
+Fix: Adjusted some code to fix this issue
+
+[-] Syntax for multiple init args in ForLoop?
+Note: For now I just use commas for each init arg
+Fix:
+
+[-] scf.if with no return type special case needs to be implemented
+Fix:

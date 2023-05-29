@@ -15,8 +15,6 @@ registering new dialects.
 * Ensures the generation of well-formed and semantically valid MLIR code.
 * Provides a variety of configuration options for controlling the complexity and
  scope of the generated code.
-* (Automatically generates test harnesses, enabling seamless integration with 
-testing frameworks)
 
 ## Getting Started
 To start using MLIRsmith, follow these steps:
@@ -25,10 +23,9 @@ To start using MLIRsmith, follow these steps:
 https://github.com/Berke-Ates/AST`
 2. Install the requirements by following the instructions in the 
 [Requirements](#requirements) section.
-3. Register the desired dialects using the provided interface.
-4. Build the project by following the instructions in the [Building](#building) 
+3. Build the project by following the instructions in the [Building](#building) 
 section.
-5. Run MLIRsmith with the appropriate configuration options to generate random 
+4. Run MLIRsmith with the appropriate configuration options to generate random 
 MLIR code. 
 
 For more details on using MLIRsmith and its various options, please refer to the
@@ -44,27 +41,6 @@ git submodule update --init --recursive
 ```
 This will initialize and update all necessary submodules and their nested 
 submodules in a single step.
-
-### MLIR
-Follow these steps to build MLIR:
-```sh
-cd llvm-project
-mkdir build && cd build
-
-cmake -G Ninja ../llvm \
-  -DLLVM_ENABLE_PROJECTS="mlir" \
-  -DLLVM_TARGETS_TO_BUILD="host" \
-  -DLLVM_ENABLE_ASSERTIONS=ON \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DLLVM_ENABLE_LLD=ON \
-  -DLLVM_INSTALL_UTILS=ON
-
-ninja
-```
-
-Note: Depending on your machine this may take a while.
 
 ### DaCe (Optional)
 Install DaCe with the following commands:
@@ -115,13 +91,26 @@ Note: Replace `<Path to llvm-project>` by the absolute path to the
 project.
 
 ## Building
-
 Please follow these steps to build MLIRsmith:
 
-1. Ensure you have the required dependencies installed: MLIR, CMake, and Ninja.
-2. Create a build directory: `mkdir build && cd build`
-3. Configure the project with CMake: `cmake -G Ninja ..`
-4. Build the project: `ninja`
+```sh
+cd llvm-project
+mkdir build && cd build
+
+cmake -G Ninja ../llvm \
+  -DLLVM_ENABLE_PROJECTS="mlir" \
+  -DLLVM_TARGETS_TO_BUILD="host" \
+  -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DLLVM_ENABLE_LLD=ON \
+  -DLLVM_INSTALL_UTILS=ON
+
+ninja
+```
+
+Note: Depending on your machine this may take a while.
 
 ## Usage
 
@@ -132,13 +121,10 @@ Once MLIRsmith is built, you can run it with the following command:
 
 The available options include:
 
-* `-p, --show-dialects`: Print the list of registered dialects
-* `-d, --dialects`: A comma-separated list of dialects to generate code for.
-* `-n, --num-tests`: The number of test cases to generate (default: 1).
-* `-o, --output`: The output directory for the generated code (default: current 
-directory).
-* `-s, --seed`: The seed for the random number generator (default: system time).
-* `-c, --config`: The path to a configuration file with additional options.
+* `---dump`: Dump the used configuration.
+* `-o`: The output directory for the generated code (default: stdout).
+* `--seed`: The seed for the random number generator (default: system time).
+* `-c`: The path to a configuration file with additional options.
 
 
 ## File Structure
@@ -164,12 +150,6 @@ generated code.
 The main source files for MLIRsmith are located at the root level of the 
 project. These files implement the core functionality of the tool, including the
  generation of random MLIR code and the registration and management of dialects.
-
-## Contributing
-We welcome contributions to MLIRsmith! If you are interested in contributing, 
-please follow the guidelines in our [CONTRIBUTING.md](CONTRIBUTING.md) file. We 
-encourage you to submit bug reports, propose new features, and create pull 
-requests to improve MLIRsmith.
 
 ## License
 MLIRsmith is licensed under the [BSD-3-Clause license](LICENSE).
