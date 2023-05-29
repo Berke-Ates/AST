@@ -114,7 +114,7 @@ CXX=$(which clang++-10)
 export CXX
 export DACE_compiler_cpu_openmp_sections=0
 export DACE_instrumentation_report_each_invocation=0
-export DACE_compiler_cpu_args="$flags $opt_lvl_cc"
+export DACE_compiler_cpu_args="$flags -O0"
 export DACE_include_folder="$scripts_dir"/../dace/dace/runtime/include
 # export DACE_debugprint=verbose # for debugging
 export PYTHONWARNINGS="ignore"
@@ -163,7 +163,8 @@ exec >>"$log_file" 2>&1 # Redirect the output to the log file
 set -x
 
 # Optimizing with MLIR
-mlir-opt --cse --inline "$mlir_file" >"$mlir_dir"/"${input_name}"_opt.mlir
+mlir-opt --cse --canonicalize --symbol-dce --loop-invariant-code-motion \
+  --inline "$mlir_file" >"$mlir_dir"/"${input_name}"_opt.mlir
 
 # Lower to LLVM dialect
 mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
@@ -176,12 +177,12 @@ mlir-translate --mlir-to-llvmir "$mlir_dir"/"${input_name}"_ll.mlir \
   >"$mlir_dir"/"${input_name}".ll
 
 # Compile
-llc $opt_lvl_cc --relocation-model=pic "$mlir_dir"/"${input_name}".ll \
+llc -O0 --relocation-model=pic "$mlir_dir"/"${input_name}".ll \
   -o "$mlir_dir"/"${input_name}".s
 
 # Assemble
 # shellcheck disable=SC2086
-clang $opt_lvl_cc $flags "$funcs_lib" "$mlir_dir"/"${input_name}".s \
+clang -O0 $flags "$funcs_lib" "$mlir_dir"/"${input_name}".s \
   -o "$mlir_dir"/"${input_name}".out -lm
 
 set +x
@@ -217,7 +218,7 @@ llc $opt_lvl_cc --relocation-model=pic "$llvm_dir"/"${input_name}".ll \
 
 # Assemble
 # shellcheck disable=SC2086
-clang $opt_lvl_cc $flags "$funcs_lib" "$llvm_dir"/"${input_name}".s \
+clang -O0 $flags "$funcs_lib" "$llvm_dir"/"${input_name}".s \
   -o "$llvm_dir"/"${input_name}".out -lm
 
 set +x
@@ -270,7 +271,7 @@ sed -i '/free(_arg0);/a\return val;' "$DACE_default_build_folder"/sdfg_0/sample/
 # Compile
 cp "$DACE_default_build_folder"/sdfg_0/build/libsdfg_0.so "$dcir_dir"
 # shellcheck disable=SC2086
-clang++ $opt_lvl_cc $flags -I "$DACE_include_folder" \
+clang++ -O0 $flags -I "$DACE_include_folder" \
   "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp \
   "$dcir_dir"/libsdfg_0.so -o "$dcir_dir"/"${input_name}".out -lm
 
@@ -323,7 +324,7 @@ sed -i '/free(_arg0);/a\return val;' "$DACE_default_build_folder"/sdfg_0/sample/
 # Compile
 cp "$DACE_default_build_folder"/sdfg_0/build/libsdfg_0.so "$dace_dir"
 # shellcheck disable=SC2086
-clang++ $opt_lvl_cc $flags -I "$DACE_include_folder" \
+clang++ -O0 $flags -I "$DACE_include_folder" \
   "$DACE_default_build_folder"/sdfg_0/sample/sdfg_0_main.cpp \
   "$dace_dir"/libsdfg_0.so -o "$dace_dir"/"${input_name}".out -lm
 
