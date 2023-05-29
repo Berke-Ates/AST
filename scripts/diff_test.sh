@@ -26,7 +26,7 @@ if [ ! -d "$output_dir" ]; then
   mkdir -p "$output_dir"
 fi
 
-comp_err_dir="$output_dir"/comp_err_dir
+comp_err_dir="$output_dir"/comp_err
 exe_diff_dir="$output_dir"/exe_diff
 flag_diff_dir="$output_dir"/flag_diff
 normal_dir="$output_dir"/normal

@@ -14,6 +14,7 @@ if len(sys.argv) != 5:
     print("SDFG Optimization and Compilation Tool")
     print("Arguments:")
     print("  Input SDFG: The SDFG to optimize")
+    print("  Output File: Specifies the location to save the result.")
     print("  Optimization Level (0-3): Determines how many optimizations to apply")
     print("  Add Timing Instrumentation (T/F): If 'T', measures execution time")
     exit(1)
