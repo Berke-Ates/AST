@@ -11,7 +11,7 @@ set -o pipefail # Prevent errors from being masked
 
 # Check args
 if [ $# -ne 2 ]; then
-  echo "Usage: ./pipeline.sh <MLIR File> <Output Dir>"
+  echo "Usage: $0 <MLIR File> <Output Dir>"
   exit 1
 fi
 

@@ -7,7 +7,7 @@ set -u # Disallow using undefined variables
 
 # Check args
 if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-  echo "Usage: ./smith.sh <Path to mlir-smith> <Output Dir> [<Config File>]"
+  echo "Usage: $0 <Path to mlir-smith> <Output Dir> [<Config File>]"
   exit 1
 fi
 
