@@ -1,11 +1,10 @@
 module {
-  func.func private @external_dce_flag_1()
   func.func @main() -> i32 {
-    %alloc = memref.alloc() : memref<i64>
-    memref.copy %alloc, %alloc : memref<i64> to memref<i64>
-    call @external_dce_flag_1() : () -> ()
-    %0 = memref.load %alloc[] : memref<i64>
-    %c2_i32 = arith.constant 2 : i32
-    return %c2_i32 : i32
+    %alloc = memref.alloc() : memref<0xi32>
+    %c0 = arith.constant 0 : index
+    %0 = memref.load %alloc[%c0] : memref<0xi32>
+    %c0_i32 = arith.constant 0 : i32
+    %1 = arith.maxsi %0, %c0_i32 : i32
+    return %c0_i32 : i32
   }
 }
