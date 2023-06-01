@@ -1,0 +1,170 @@
+
+##===----------------------------------------------------------------------===##
+## Tool Versions
+##===----------------------------------------------------------------------===##
+
+clang version: clang version 17.0.0 (https://github.com/llvm/llvm-project 67760d7e315ff90198bccfd4b0a3934f7a30e6ce)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /home/xdb/mlir-dace/llvm-project/build/bin
+
+clang++ version: clang version 17.0.0 (https://github.com/llvm/llvm-project 67760d7e315ff90198bccfd4b0a3934f7a30e6ce)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /home/xdb/mlir-dace/llvm-project/build/bin
+
+clang-10 version: clang version 10.0.0-4ubuntu1 
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+
+clang++-10 version: clang version 10.0.0-4ubuntu1 
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+
+mlir-opt version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+
+mlir-translate version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+
+sdfg-opt version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+
+sdfg-translate version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+
+python3 version: Python 3.10.9
+
+llc version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+  Default target: x86_64-unknown-linux-gnu
+  Host CPU: skylake
+
+  Registered Targets:
+    x86    - 32-bit X86: Pentium-Pro and above
+    x86-64 - 64-bit X86: EM64T and AMD64
+
+##===----------------------------------------------------------------------===##
+## Submodule Commits
+##===----------------------------------------------------------------------===##
+
+Submodule: llvm-project
+Remote: https://github.com/Berke-Ates/llvm-project
+Commit: c6abc7c93d240e7a8084599659d67c08cf32bd9e
+
+Submodule: dace
+Remote: https://github.com/spcl/dace
+Commit: 4fcb0b5ee90384829ab7a76bde0a07a7a8cbcb4b
+
+Submodule: mlir-dace
+Remote: https://github.com/spcl/mlir-dace
+Commit: +8734d2c10ecb9078a81ff3ae0b64a774b098aca5
+
+##===----------------------------------------------------------------------===##
+## Environment Variables
+##===----------------------------------------------------------------------===##
+
+mlir_file: ./out/smith_7/input.mlir
+input_name: input
+scripts_dir: ./scripts
+
+flags: -fPIC -march=native
+opt_lvl_cc: -O3
+opt_lvl_dc: 3
+
+DACE_compiler_cpu_executable: /usr/bin/clang++-10
+CC: /usr/bin/clang-10
+CXX: /usr/bin/clang++-10
+DACE_compiler_cpu_openmp_sections: 0
+DACE_instrumentation_report_each_invocation: 0
+DACE_compiler_cpu_args: -fPIC -march=native -O0
+DACE_include_folder: ./scripts/../dace/dace/runtime/include
+PYTHONWARNINGS: ignore
+
+##===----------------------------------------------------------------------===##
+## External Functions Generation
+##===----------------------------------------------------------------------===##
+
++ funcs_lib=./out/smith_7/funcs.o
++ ./scripts/gen_ext_func.sh ./out/smith_7/input.mlir ./out/smith_7/funcs.c
++ clang -c ./out/smith_7/funcs.c -o ./out/smith_7/funcs.o
+++ realpath ./out/smith_7/funcs.o
++ absolute_path_funcs_lib=/home/xdb/AST/out/smith_7/funcs.o
++ export DACE_compiler_cpu_libs=/home/xdb/AST/out/smith_7/funcs.o
++ DACE_compiler_cpu_libs=/home/xdb/AST/out/smith_7/funcs.o
++ set +x
+
+##===----------------------------------------------------------------------===##
+## MLIR Pipeline
+##===----------------------------------------------------------------------===##
+
++ mlir-opt --cse --canonicalize --symbol-dce --loop-invariant-code-motion --inline ./out/smith_7/input.mlir
++ mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts ./out/smith_7/mlir/input_opt.mlir
++ mlir-translate --mlir-to-llvmir ./out/smith_7/mlir/input_ll.mlir
++ llc -O0 --relocation-model=pic ./out/smith_7/mlir/input.ll -o ./out/smith_7/mlir/input.s
++ clang -O0 -fPIC -march=native ./out/smith_7/funcs.o ./out/smith_7/mlir/input.s -o ./out/smith_7/mlir/input.out -lm
++ set +x
+
+##===----------------------------------------------------------------------===##
+## LLVM Pipeline
+##===----------------------------------------------------------------------===##
+
++ mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts ./out/smith_7/input.mlir
++ mlir-translate --mlir-to-llvmir ./out/smith_7/llvm/input_ll.mlir
++ llc -O3 --relocation-model=pic ./out/smith_7/llvm/input.ll -o ./out/smith_7/llvm/input.s
++ clang -O0 -fPIC -march=native ./out/smith_7/funcs.o ./out/smith_7/llvm/input.s -o ./out/smith_7/llvm/input.out -lm
++ set +x
+
+##===----------------------------------------------------------------------===##
+## DCIR Pipeline
+##===----------------------------------------------------------------------===##
+
++ export DACE_default_build_folder=./out/smith_7/dcir/.dacecache
++ DACE_default_build_folder=./out/smith_7/dcir/.dacecache
++ rm -rf ./out/smith_7/dcir/.dacecache
++ sdfg-opt --convert-to-sdfg ./out/smith_7/mlir/input_opt.mlir
++ sdfg-translate --mlir-to-sdfg ./out/smith_7/dcir/input.mlir
++ python3 ./scripts/compile_sdfg.py ./out/smith_7/dcir/input.sdfg ./out/smith_7/dcir/input_opt.sdfg 3 T
+++ find ./out/smith_7/dcir/.dacecache -iname sdfg_0.cpp.o
++ obj_file=./out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/sdfg_0.dir/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/src/cpu/sdfg_0.cpp.o
++ objdump -d ./out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/sdfg_0.dir/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/src/cpu/sdfg_0.cpp.o
++ sed -i '/free(_arg0);/d' ./out/smith_7/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ sed -i '/return 0;/d' ./out/smith_7/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ sed -i '/}/i\int val = *_arg0;' ./out/smith_7/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ sed -i '/int val = \*_arg0;/a\free(_arg0);' ./out/smith_7/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ sed -i '/free(_arg0);/a\return val;' ./out/smith_7/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ cp ./out/smith_7/dcir/.dacecache/sdfg_0/build/libsdfg_0.so ./out/smith_7/dcir
++ clang++ -O0 -fPIC -march=native -I ./scripts/../dace/dace/runtime/include ./out/smith_7/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp ./out/smith_7/dcir/libsdfg_0.so -o ./out/smith_7/dcir/input.out -lm
++ set +x
+
+##===----------------------------------------------------------------------===##
+## DaCe Pipeline
+##===----------------------------------------------------------------------===##
+
++ export DACE_default_build_folder=./out/smith_7/dace/.dacecache
++ DACE_default_build_folder=./out/smith_7/dace/.dacecache
++ rm -rf ./out/smith_7/dace/.dacecache
++ sdfg-opt --convert-to-sdfg ./out/smith_7/input.mlir
++ sdfg-translate --mlir-to-sdfg ./out/smith_7/dace/input.mlir
++ python3 ./scripts/compile_sdfg.py ./out/smith_7/dace/input.sdfg ./out/smith_7/dace/input_opt.sdfg 3 T
+Traceback (most recent call last):
+  File "/home/xdb/AST/./scripts/compile_sdfg.py", line 63, in <module>
+    sdfg.compile()
+  File "/home/xdb/AST/dace/dace/sdfg/sdfg.py", line 2254, in compile
+    program_objects = codegen.generate_code(sdfg, validate=validate)
+  File "/home/xdb/AST/dace/dace/codegen/codegen.py", line 199, in generate_code
+    frame = framecode.DaCeCodeGenerator(sdfg)
+  File "/home/xdb/AST/dace/dace/codegen/targets/framecode.py", line 52, in __init__
+    self.arglist = sdfg.arglist(scalars_only=False, free_symbols=fsyms)
+  File "/home/xdb/AST/dace/dace/sdfg/sdfg.py", line 1379, in arglist
+    scalar_args.update({k: dt.Scalar(self.symbols[k]) for k in free_symbols if not k.startswith('__dace')})
+  File "/home/xdb/AST/dace/dace/sdfg/sdfg.py", line 1379, in <dictcomp>
+    scalar_args.update({k: dt.Scalar(self.symbols[k]) for k in free_symbols if not k.startswith('__dace')})
+KeyError: 's_1'

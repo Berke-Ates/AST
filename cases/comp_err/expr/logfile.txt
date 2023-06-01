@@ -1,0 +1,195 @@
+
+##===----------------------------------------------------------------------===##
+## Tool Versions
+##===----------------------------------------------------------------------===##
+
+clang version: clang version 17.0.0 (https://github.com/llvm/llvm-project 67760d7e315ff90198bccfd4b0a3934f7a30e6ce)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /home/xdb/mlir-dace/llvm-project/build/bin
+
+clang++ version: clang version 17.0.0 (https://github.com/llvm/llvm-project 67760d7e315ff90198bccfd4b0a3934f7a30e6ce)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /home/xdb/mlir-dace/llvm-project/build/bin
+
+clang-10 version: clang version 10.0.0-4ubuntu1 
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+
+clang++-10 version: clang version 10.0.0-4ubuntu1 
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+
+mlir-opt version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+
+mlir-translate version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+
+sdfg-opt version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+
+sdfg-translate version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+
+python3 version: Python 3.10.9
+
+llc version: LLVM (http://llvm.org/):
+  LLVM version 17.0.0git
+  Optimized build with assertions.
+  Default target: x86_64-unknown-linux-gnu
+  Host CPU: skylake
+
+  Registered Targets:
+    x86    - 32-bit X86: Pentium-Pro and above
+    x86-64 - 64-bit X86: EM64T and AMD64
+
+##===----------------------------------------------------------------------===##
+## Submodule Commits
+##===----------------------------------------------------------------------===##
+
+Submodule: llvm-project
+Remote: https://github.com/Berke-Ates/llvm-project
+Commit: a985d4e2668e894282b690d829191a2df6800609
+
+Submodule: dace
+Remote: https://github.com/spcl/dace
+Commit: 4fcb0b5ee90384829ab7a76bde0a07a7a8cbcb4b
+
+Submodule: mlir-dace
+Remote: https://github.com/spcl/mlir-dace
+Commit: c5e8994827eb7483155e186312f10878063ee4c8
+
+##===----------------------------------------------------------------------===##
+## Environment Variables
+##===----------------------------------------------------------------------===##
+
+mlir_file: ./out/smith_5/input.mlir
+input_name: input
+scripts_dir: ./scripts
+
+flags: -fPIC -march=native
+opt_lvl_cc: -O3
+opt_lvl_dc: 3
+
+DACE_compiler_cpu_executable: /usr/bin/clang++-10
+CC: /usr/bin/clang-10
+CXX: /usr/bin/clang++-10
+DACE_compiler_cpu_openmp_sections: 0
+DACE_instrumentation_report_each_invocation: 0
+DACE_compiler_cpu_args: -fPIC -march=native -O0
+DACE_include_folder: ./scripts/../dace/dace/runtime/include
+PYTHONWARNINGS: ignore
+
+##===----------------------------------------------------------------------===##
+## External Functions Generation
+##===----------------------------------------------------------------------===##
+
++ funcs_lib=./out/smith_5/funcs.o
++ ./scripts/gen_ext_func.sh ./out/smith_5/input.mlir ./out/smith_5/funcs.c
++ clang -c ./out/smith_5/funcs.c -o ./out/smith_5/funcs.o
+++ realpath ./out/smith_5/funcs.o
++ absolute_path_funcs_lib=/home/xdb/AST/out/smith_5/funcs.o
++ export DACE_compiler_cpu_libs=/home/xdb/AST/out/smith_5/funcs.o
++ DACE_compiler_cpu_libs=/home/xdb/AST/out/smith_5/funcs.o
++ set +x
+
+##===----------------------------------------------------------------------===##
+## MLIR Pipeline
+##===----------------------------------------------------------------------===##
+
++ mlir-opt --cse --canonicalize --symbol-dce --loop-invariant-code-motion --inline ./out/smith_5/input.mlir
++ mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts ./out/smith_5/mlir/input_opt.mlir
++ mlir-translate --mlir-to-llvmir ./out/smith_5/mlir/input_ll.mlir
++ llc -O0 --relocation-model=pic ./out/smith_5/mlir/input.ll -o ./out/smith_5/mlir/input.s
++ clang -O0 -fPIC -march=native ./out/smith_5/funcs.o ./out/smith_5/mlir/input.s -o ./out/smith_5/mlir/input.out -lm
++ set +x
+
+##===----------------------------------------------------------------------===##
+## LLVM Pipeline
+##===----------------------------------------------------------------------===##
+
++ mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts ./out/smith_5/input.mlir
++ mlir-translate --mlir-to-llvmir ./out/smith_5/llvm/input_ll.mlir
++ llc -O3 --relocation-model=pic ./out/smith_5/llvm/input.ll -o ./out/smith_5/llvm/input.s
++ clang -O0 -fPIC -march=native ./out/smith_5/funcs.o ./out/smith_5/llvm/input.s -o ./out/smith_5/llvm/input.out -lm
++ set +x
+
+##===----------------------------------------------------------------------===##
+## DCIR Pipeline
+##===----------------------------------------------------------------------===##
+
++ export DACE_default_build_folder=./out/smith_5/dcir/.dacecache
++ DACE_default_build_folder=./out/smith_5/dcir/.dacecache
++ rm -rf ./out/smith_5/dcir/.dacecache
++ sdfg-opt --convert-to-sdfg ./out/smith_5/mlir/input_opt.mlir
++ sdfg-translate --mlir-to-sdfg ./out/smith_5/dcir/input.mlir
++ python3 ./scripts/compile_sdfg.py ./out/smith_5/dcir/input.sdfg ./out/smith_5/dcir/input_opt.sdfg 3 T
+++ find ./out/smith_5/dcir/.dacecache -iname sdfg_0.cpp.o
++ obj_file=./out/smith_5/dcir/.dacecache/sdfg_0/build/CMakeFiles/sdfg_0.dir/home/xdb/AST/out/smith_5/dcir/.dacecache/sdfg_0/src/cpu/sdfg_0.cpp.o
++ objdump -d ./out/smith_5/dcir/.dacecache/sdfg_0/build/CMakeFiles/sdfg_0.dir/home/xdb/AST/out/smith_5/dcir/.dacecache/sdfg_0/src/cpu/sdfg_0.cpp.o
++ sed -i '/free(_arg0);/d' ./out/smith_5/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ sed -i '/return 0;/d' ./out/smith_5/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ sed -i '/}/i\int val = *_arg0;' ./out/smith_5/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ sed -i '/int val = \*_arg0;/a\free(_arg0);' ./out/smith_5/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ sed -i '/free(_arg0);/a\return val;' ./out/smith_5/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp
++ cp ./out/smith_5/dcir/.dacecache/sdfg_0/build/libsdfg_0.so ./out/smith_5/dcir
++ clang++ -O0 -fPIC -march=native -I ./scripts/../dace/dace/runtime/include ./out/smith_5/dcir/.dacecache/sdfg_0/sample/sdfg_0_main.cpp ./out/smith_5/dcir/libsdfg_0.so -o ./out/smith_5/dcir/input.out -lm
++ set +x
+
+##===----------------------------------------------------------------------===##
+## DaCe Pipeline
+##===----------------------------------------------------------------------===##
+
++ export DACE_default_build_folder=./out/smith_5/dace/.dacecache
++ DACE_default_build_folder=./out/smith_5/dace/.dacecache
++ rm -rf ./out/smith_5/dace/.dacecache
++ sdfg-opt --convert-to-sdfg ./out/smith_5/input.mlir
++ sdfg-translate --mlir-to-sdfg ./out/smith_5/dace/input.mlir
++ python3 ./scripts/compile_sdfg.py ./out/smith_5/dace/input.sdfg ./out/smith_5/dace/input_opt.sdfg 3 T
+ValueError: Error from parse_expr with transformed code: '(((-Integer (2 ))<=((-Integer (2 ))*(-Integer (2 ))))+((-Integer (2 ))<=((-Integer (2 ))*(-Integer (2 )))))'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/xdb/AST/./scripts/compile_sdfg.py", line 42, in <module>
+    sdfg.simplify()
+  File "/home/xdb/AST/dace/dace/sdfg/sdfg.py", line 2398, in simplify
+    return SimplifyPass(validate=validate, validate_all=validate_all, verbose=verbose).apply_pass(self, {})
+  File "/home/xdb/AST/dace/dace/transformation/passes/simplify.py", line 106, in apply_pass
+    result = super().apply_pass(sdfg, pipeline_results)
+  File "/home/xdb/AST/dace/dace/transformation/pass_pipeline.py", line 547, in apply_pass
+    newret = super().apply_pass(sdfg, state)
+  File "/home/xdb/AST/dace/dace/transformation/pass_pipeline.py", line 502, in apply_pass
+    r = self.apply_subpass(sdfg, p, state)
+  File "/home/xdb/AST/dace/dace/transformation/passes/simplify.py", line 83, in apply_subpass
+    ret = p.apply_pass(sdfg, state)
+  File "/home/xdb/AST/dace/dace/transformation/passes/constant_propagation.py", line 100, in apply_pass
+    state.replace_dict(mapping)
+  File "/home/xdb/AST/dace/dace/sdfg/state.py", line 710, in replace_dict
+    replace_dict(self, repl, symrepl)
+  File "/home/xdb/AST/dace/dace/sdfg/replace.py", line 55, in replace_dict
+    symrepl = symrepl or {
+  File "/home/xdb/AST/dace/dace/sdfg/replace.py", line 57, in <dictcomp>
+    symbolic.pystr_to_symbolic(new_name) if isinstance(new_name, str) else new_name
+  File "/home/xdb/AST/dace/dace/symbolic.py", line 1069, in pystr_to_symbolic
+    return sympy_to_dace(sympy.sympify(expr, locals, evaluate=simplify), symbol_map)
+  File "/home/xdb/miniconda3/lib/python3.10/site-packages/sympy/core/sympify.py", line 472, in sympify
+    expr = parse_expr(a, local_dict=locals, transformations=transformations, evaluate=evaluate)
+  File "/home/xdb/miniconda3/lib/python3.10/site-packages/sympy/parsing/sympy_parser.py", line 1026, in parse_expr
+    raise e from ValueError(f"Error from parse_expr with transformed code: {code!r}")
+  File "/home/xdb/miniconda3/lib/python3.10/site-packages/sympy/parsing/sympy_parser.py", line 1017, in parse_expr
+    rv = eval_expr(code, local_dict, global_dict)
+  File "/home/xdb/miniconda3/lib/python3.10/site-packages/sympy/parsing/sympy_parser.py", line 911, in eval_expr
+    expr = eval(
+  File "<string>", line 1, in <module>
+  File "/home/xdb/miniconda3/lib/python3.10/site-packages/sympy/logic/boolalg.py", line 211, in _noop
+    raise TypeError('BooleanAtom not allowed in this context.')
+TypeError: BooleanAtom not allowed in this context.

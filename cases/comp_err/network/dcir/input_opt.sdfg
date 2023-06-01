@@ -1,0 +1,304 @@
+{
+  "type": "SDFG",
+  "attributes": {
+    "arg_names": [
+      "_arg0"
+    ],
+    "constants_prop": {},
+    "_arrays": {
+      "_arg0": {
+        "type": "Array",
+        "attributes": {
+          "allow_conflicts": false,
+          "strides": [
+            "1"
+          ],
+          "total_size": "1",
+          "offset": [
+            "0"
+          ],
+          "may_alias": false,
+          "alignment": 0,
+          "start_offset": 0,
+          "optional": false,
+          "pool": false,
+          "dtype": "int32",
+          "shape": [
+            "1"
+          ],
+          "transient": false,
+          "storage": "CPU_Heap",
+          "lifetime": "Scope",
+          "location": {},
+          "debuginfo": {
+            "type": "DebugInfo",
+            "start_line": 0,
+            "end_line": 0,
+            "start_column": 0,
+            "end_column": 0,
+            "filename": null
+          }
+        }
+      }
+    },
+    "symbols": {},
+    "instrument": "Timer",
+    "global_code": {},
+    "init_code": {},
+    "exit_code": {},
+    "orig_sdfg": null,
+    "transformation_hist": [],
+    "logical_groups": [],
+    "openmp_sections": false,
+    "debuginfo": {
+      "type": "DebugInfo",
+      "start_line": 2,
+      "end_line": 2,
+      "start_column": 3,
+      "end_column": 3,
+      "filename": "./out/smith_7/dcir/input.mlir"
+    },
+    "_pgrids": {},
+    "_subarrays": {},
+    "_rdistrarrays": {},
+    "callback_mapping": {},
+    "name": "sdfg_0",
+    "hash": "e6583d8a6ead2ac8b8d35f04dc090da13b35f1f6b487136be41d659832eb7a89"
+  },
+  "nodes": [
+    {
+      "type": "SDFGState",
+      "label": "constant_1",
+      "id": 0,
+      "collapsed": false,
+      "scope_dict": {
+        "-1": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "nodes": [
+        {
+          "type": "Tasklet",
+          "label": "return",
+          "attributes": {
+            "code": {
+              "string_data": "external_dce_flag_1();",
+              "language": "CPP"
+            },
+            "state_fields": [],
+            "code_global": {
+              "string_data": "extern \"C\" void external_dce_flag_1();\n",
+              "language": "CPP"
+            },
+            "code_init": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_exit": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 15,
+              "end_line": 15,
+              "start_column": 7,
+              "end_column": 7,
+              "filename": "./out/smith_7/dcir/input.mlir"
+            },
+            "instrument": "No_Instrumentation",
+            "side_effects": true,
+            "label": "return",
+            "location": {},
+            "environments": [],
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 0,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "Tasklet",
+          "label": "return",
+          "attributes": {
+            "code": {
+              "string_data": "external_dce_flag_2();",
+              "language": "CPP"
+            },
+            "state_fields": [],
+            "code_global": {
+              "string_data": "extern \"C\" void external_dce_flag_2();\n",
+              "language": "CPP"
+            },
+            "code_init": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_exit": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 20,
+              "end_line": 20,
+              "start_column": 7,
+              "end_column": 7,
+              "filename": "./out/smith_7/dcir/input.mlir"
+            },
+            "instrument": "No_Instrumentation",
+            "side_effects": true,
+            "label": "return",
+            "location": {},
+            "environments": [],
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 1,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "AccessNode",
+          "label": "_arg0",
+          "attributes": {
+            "setzero": false,
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 26,
+              "end_line": 26,
+              "start_column": 7,
+              "end_column": 7,
+              "filename": "./out/smith_7/dcir/input.mlir"
+            },
+            "data": "_arg0",
+            "instrument": "No_Instrumentation",
+            "instrument_condition": {
+              "string_data": "1",
+              "language": "CPP"
+            },
+            "in_connectors": {},
+            "out_connectors": {}
+          },
+          "id": 2,
+          "scope_entry": null,
+          "scope_exit": null
+        },
+        {
+          "type": "Tasklet",
+          "label": "symassign",
+          "attributes": {
+            "code": {
+              "string_data": "__out = 0",
+              "language": "Python"
+            },
+            "state_fields": [],
+            "code_global": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_init": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "code_exit": {
+              "string_data": "",
+              "language": "CPP"
+            },
+            "debuginfo": {
+              "type": "DebugInfo",
+              "start_line": 531,
+              "end_line": 531,
+              "start_column": 0,
+              "end_column": 0,
+              "filename": "/home/xdb/AST/dace/dace/transformation/passes/scalar_to_symbol.py"
+            },
+            "instrument": "No_Instrumentation",
+            "side_effects": null,
+            "label": "symassign",
+            "location": {},
+            "environments": [],
+            "in_connectors": {},
+            "out_connectors": {
+              "__out": "int32"
+            }
+          },
+          "id": 3,
+          "scope_entry": null,
+          "scope_exit": null
+        }
+      ],
+      "edges": [
+        {
+          "type": "MultiConnectorEdge",
+          "attributes": {
+            "data": {
+              "type": "Memlet",
+              "attributes": {
+                "volume": "1",
+                "dynamic": false,
+                "subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "other_subset": null,
+                "data": "_arg0",
+                "wcr": null,
+                "debuginfo": null,
+                "wcr_nonatomic": false,
+                "allow_oob": false,
+                "src_subset": null,
+                "dst_subset": {
+                  "type": "Range",
+                  "ranges": [
+                    {
+                      "start": "0",
+                      "end": "0",
+                      "step": "1",
+                      "tile": "1"
+                    }
+                  ]
+                },
+                "is_data_src": false,
+                "num_accesses": "1"
+              }
+            }
+          },
+          "src": "3",
+          "dst": "2",
+          "dst_connector": null,
+          "src_connector": "__out"
+        }
+      ],
+      "attributes": {
+        "is_collapsed": false,
+        "nosync": false,
+        "instrument": "No_Instrumentation",
+        "symbol_instrument": "No_Instrumentation",
+        "symbol_instrument_condition": {
+          "string_data": "1",
+          "language": "CPP"
+        },
+        "executions": "0",
+        "dynamic_executions": true,
+        "ranges": {},
+        "location": {}
+      }
+    }
+  ],
+  "edges": [],
+  "sdfg_list_id": 0,
+  "start_state": 0,
+  "dace_version": "0.14.2"
+}

@@ -1,0 +1,4 @@
+/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/sdfg_0.dir
+/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/dacestub_sdfg_0.dir
+/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/edit_cache.dir
+/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/rebuild_cache.dir

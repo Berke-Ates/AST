@@ -1,0 +1,61 @@
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/CMakeScratch/TryCompile-EuyOZa
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_29254/fast && /usr/bin/make  -f CMakeFiles/cmTC_29254.dir/build.make CMakeFiles/cmTC_29254.dir/build
+make[1]: Entering directory '/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/CMakeScratch/TryCompile-EuyOZa'
+Building C object CMakeFiles/cmTC_29254.dir/src.c.o
+/usr/bin/clang-10 -DCMAKE_HAVE_LIBC_PTHREAD   -MD -MT CMakeFiles/cmTC_29254.dir/src.c.o -MF CMakeFiles/cmTC_29254.dir/src.c.o.d -o CMakeFiles/cmTC_29254.dir/src.c.o -c /home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/CMakeScratch/TryCompile-EuyOZa/src.c
+Linking C executable cmTC_29254
+/home/xdb/cmake-3.25.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_29254.dir/link.txt --verbose=1
+/usr/bin/clang-10 CMakeFiles/cmTC_29254.dir/src.c.o -o cmTC_29254 
+/usr/bin/ld: CMakeFiles/cmTC_29254.dir/src.c.o: in function `main':
+src.c:(.text+0x25): undefined reference to `pthread_create'
+/usr/bin/ld: src.c:(.text+0x31): undefined reference to `pthread_detach'
+/usr/bin/ld: src.c:(.text+0x3d): undefined reference to `pthread_cancel'
+/usr/bin/ld: src.c:(.text+0x4f): undefined reference to `pthread_join'
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+make[1]: *** [CMakeFiles/cmTC_29254.dir/build.make:100: cmTC_29254] Error 1
+make[1]: Leaving directory '/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/CMakeScratch/TryCompile-EuyOZa'
+make: *** [Makefile:127: cmTC_29254/fast] Error 2
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/CMakeScratch/TryCompile-vc4Qja
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_ead9c/fast && /usr/bin/make  -f CMakeFiles/cmTC_ead9c.dir/build.make CMakeFiles/cmTC_ead9c.dir/build
+make[1]: Entering directory '/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/CMakeScratch/TryCompile-vc4Qja'
+Building C object CMakeFiles/cmTC_ead9c.dir/CheckFunctionExists.c.o
+/usr/bin/clang-10   -DCHECK_FUNCTION_EXISTS=pthread_create -MD -MT CMakeFiles/cmTC_ead9c.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_ead9c.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_ead9c.dir/CheckFunctionExists.c.o -c /home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/CMakeScratch/TryCompile-vc4Qja/CheckFunctionExists.c
+Linking C executable cmTC_ead9c
+/home/xdb/cmake-3.25.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ead9c.dir/link.txt --verbose=1
+/usr/bin/clang-10  -DCHECK_FUNCTION_EXISTS=pthread_create CMakeFiles/cmTC_ead9c.dir/CheckFunctionExists.c.o -o cmTC_ead9c  -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+make[1]: *** [CMakeFiles/cmTC_ead9c.dir/build.make:100: cmTC_ead9c] Error 1
+make[1]: Leaving directory '/home/xdb/AST/out/smith_7/dcir/.dacecache/sdfg_0/build/CMakeFiles/CMakeScratch/TryCompile-vc4Qja'
+make: *** [Makefile:127: cmTC_ead9c/fast] Error 2
+
+
+
