@@ -26,8 +26,11 @@ RUN apt-get update -y && \
 ################################################################################
 
 # Make sure submodules are initialized
-RUN git clone --depth 1 --branch cgo23 https://github.com/spcl/mlir-dace.git
+# FIXME: Use depth 1
+RUN git clone https://github.com/spcl/mlir-dace.git
 WORKDIR $HOME/mlir-dace
+# FIXME: Use a tag instead
+RUN git checkout 8734d2c10ecb9078a81ff3ae0b64a774b098aca5
 RUN git submodule update --init --recursive --depth 1
 
 # Build MLIR
@@ -66,6 +69,36 @@ WORKDIR $HOME
 ################################################################################
 
 # TODO: Build mlir-opt, mlir-translate, clang, clang++, llc
+
+# Get llvm-project
+# FIXME: Use depth 1
+RUN git clone https://github.com/Berke-Ates/llvm-project.git
+WORKDIR $HOME/llvm-project
+# FIXME: Use a tag instead
+RUN git checkout be7e2d19da2a1ac57452690d9484f917d946cc78
+
+# Build LLVM/MLIR
+WORKDIR $HOME/llvm-project/build
+
+RUN cmake -G Ninja ../llvm \
+  -DLLVM_ENABLE_PROJECTS="clang;mlir" \
+  -DLLVM_TARGETS_TO_BUILD="host" \
+  -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DLLVM_ENABLE_LLD=ON \
+  -DLLVM_INSTALL_UTILS=ON && \
+  ninja && \
+  cp $HOME/llvm-project/build/bin/clang $HOME/bin && \
+  cp $HOME/llvm-project/build/bin/clang++ $HOME/bin && \
+  cp $HOME/llvm-project/build/bin/llc $HOME/bin && \
+  cp $HOME/llvm-project/build/bin/mlir-opt $HOME/bin && \
+  cp $HOME/llvm-project/build/bin/mlir-translate $HOME/bin && \
+  rm -rf $HOME/llvm-project
+
+# Go home
+WORKDIR $HOME
 
 ################################################################################
 ### Reduce Image Size
@@ -120,9 +153,11 @@ ENV PATH=$HOME/bin:$PATH
 ### Install dace
 ################################################################################
 
-RUN git clone --depth 1 --branch cgo23 https://github.com/Berke-Ates/dace.git
-
+# FIXME: Use depth 1
+RUN git clone https://github.com/spcl/dace.git
 WORKDIR $HOME/dace
+# FIXME: Use a tag instead
+RUN git checkout 4fcb0b5ee90384829ab7a76bde0a07a7a8cbcb4b
 RUN git submodule update --init --recursive --depth 1 && \
   pip install --no-cache-dir --editable . && \
   pip install --no-cache-dir mxnet-mkl==1.6.0 numpy==1.23.1
