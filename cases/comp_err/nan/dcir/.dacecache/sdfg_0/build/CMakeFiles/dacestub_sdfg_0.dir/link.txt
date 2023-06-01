@@ -1,1 +1,0 @@
-/usr/bin/clang++-10 -fPIC -fPIC -march=native -O0 -fopenmp=libomp  -O2 -g -DNDEBUG -Wl,--disable-new-dtags  -shared -Wl,-soname,libdacestub_sdfg_0.so -o libdacestub_sdfg_0.so CMakeFiles/dacestub_sdfg_0.dir/tools/dacestub.cpp.o  -lpthread /usr/lib/llvm-10/lib/libomp.so /usr/lib/x86_64-linux-gnu/libpthread.so 
