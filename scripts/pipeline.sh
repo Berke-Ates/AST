@@ -178,8 +178,7 @@ mlir-translate --mlir-to-llvmir "$mlir_dir"/"${input_name}"_ll.mlir \
   >"$mlir_dir"/"${input_name}".ll
 
 # Generate assembly
-llc -O0 "$mlir_dir"/"${input_name}".ll \
-  >"$mlir_dir"/"${input_name}".s
+llc -O0 "$mlir_dir"/"${input_name}".ll -o "$mlir_dir"/"${input_name}".s
 
 # Compile & Assemble
 # shellcheck disable=SC2086
@@ -218,8 +217,7 @@ opt $opt_lvl_cc -S "$llvm_dir"/"${input_name}".ll \
   >"$llvm_dir"/"${input_name}"_opt.ll
 
 # Generate assembly
-llc -O0 "$llvm_dir"/"${input_name}"_opt.ll \
-  >"$llvm_dir"/"${input_name}".s
+llc -O0 "$llvm_dir"/"${input_name}"_opt.ll -o "$llvm_dir"/"${input_name}".s
 
 # Compile & Assemble
 # shellcheck disable=SC2086
