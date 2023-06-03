@@ -214,7 +214,7 @@ mlir-translate --mlir-to-llvmir "$llvm_dir"/"${input_name}"_ll.mlir \
   >"$llvm_dir"/"${input_name}".ll
 
 # Optimize
-opt $opt_lvl_cc "$llvm_dir"/"${input_name}".ll \
+opt $opt_lvl_cc -S "$llvm_dir"/"${input_name}".ll \
   >"$llvm_dir"/"${input_name}"_opt.ll
 
 # Generate assembly
