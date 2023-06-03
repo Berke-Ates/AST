@@ -92,6 +92,7 @@ RUN cmake -G Ninja ../llvm \
   ninja && \
   cp $HOME/llvm-project/build/bin/clang $HOME/bin && \
   cp $HOME/llvm-project/build/bin/clang++ $HOME/bin && \
+  cp $HOME/llvm-project/build/bin/opt $HOME/bin && \
   cp $HOME/llvm-project/build/bin/llc $HOME/bin && \
   cp $HOME/llvm-project/build/bin/mlir-opt $HOME/bin && \
   cp $HOME/llvm-project/build/bin/mlir-translate $HOME/bin && \

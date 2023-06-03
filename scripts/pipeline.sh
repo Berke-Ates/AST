@@ -54,6 +54,7 @@ check_tool mlir-translate
 check_tool sdfg-opt
 check_tool sdfg-translate
 check_tool python3
+check_tool opt
 check_tool llc
 
 add_log_section "Submodule Commits"
@@ -176,13 +177,13 @@ mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
 mlir-translate --mlir-to-llvmir "$mlir_dir"/"${input_name}"_ll.mlir \
   >"$mlir_dir"/"${input_name}".ll
 
-# Compile
-llc -O0 --relocation-model=pic "$mlir_dir"/"${input_name}".ll \
-  -o "$mlir_dir"/"${input_name}".s
+# Generate assembly
+llc -O0 "$llvm_dir"/"${input_name}".ll \
+  >"$llvm_dir"/"${input_name}".s
 
-# Assemble
+# Compile & Assemble
 # shellcheck disable=SC2086
-clang -O0 $flags "$funcs_lib" "$mlir_dir"/"${input_name}".s \
+clang -O0 $flags "$funcs_lib" "$mlir_dir"/"${input_name}".ll \
   -o "$mlir_dir"/"${input_name}".out -lm
 
 set +x
@@ -212,13 +213,17 @@ mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
 mlir-translate --mlir-to-llvmir "$llvm_dir"/"${input_name}"_ll.mlir \
   >"$llvm_dir"/"${input_name}".ll
 
-# Compile
-llc $opt_lvl_cc --relocation-model=pic "$llvm_dir"/"${input_name}".ll \
-  -o "$llvm_dir"/"${input_name}".s
+# Optimize
+opt $opt_lvl_cc "$llvm_dir"/"${input_name}".ll \
+  >"$llvm_dir"/"${input_name}"_opt.ll
 
-# Assemble
+# Generate assembly
+llc -O0 "$llvm_dir"/"${input_name}"_opt.ll \
+  >"$llvm_dir"/"${input_name}".s
+
+# Compile & Assemble
 # shellcheck disable=SC2086
-clang -O0 $flags "$funcs_lib" "$llvm_dir"/"${input_name}".s \
+clang -O0 $flags "$funcs_lib" "$llvm_dir"/"${input_name}"_opt.ll \
   -o "$llvm_dir"/"${input_name}".out -lm
 
 set +x
