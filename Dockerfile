@@ -156,6 +156,9 @@ COPY --from=llvm $HOME/bin $HOME/bin
 # Add binaries to PATH
 ENV PATH=$HOME/bin:$PATH
 
+# Add gcc header to CPATH
+ENV CPATH="/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib/:/usr/lib/gcc/x86_64-linux-gnu/11/include:/usr/local/include:/usr/include/x86_64-linux-gnu:/usr/include"
+
 ################################################################################
 ### Install dace
 ################################################################################

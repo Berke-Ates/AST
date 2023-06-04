@@ -70,7 +70,7 @@ for ((i = 0; i <= 10; i++)); do
     # Change to the binary's directory
     pushd "$(dirname "$binary")" >/dev/null || exit 1
 
-    timeout 10s ./input.out &>out.txt
+    LD_LIBRARY_PATH=. timeout 10s ./input.out &>out.txt
     echo "Exit status: $?" >>out.txt
 
     # Read the output and exit status from out.txt
