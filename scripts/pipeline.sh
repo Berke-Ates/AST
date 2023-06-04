@@ -47,8 +47,8 @@ check_tool() {
 
 check_tool clang
 check_tool clang++
-check_tool clang-10   # libomp compatible version
-check_tool clang++-10 # libomp compatible version
+check_tool clang-11   # libomp compatible version
+check_tool clang++-11 # libomp compatible version
 check_tool mlir-opt
 check_tool mlir-translate
 check_tool sdfg-opt
@@ -107,11 +107,11 @@ opt_lvl_dc="3"   # Optimization level for the data-centric optimizations (no -O)
 } >>"$log_file"
 
 # Dace Settings
-DACE_compiler_cpu_executable="$(which clang++-10)"
+DACE_compiler_cpu_executable="$(which clang++-11)"
 export DACE_compiler_cpu_executable
-CC=$(which clang-10)
+CC=$(which clang-11)
 export CC
-CXX=$(which clang++-10)
+CXX=$(which clang++-11)
 export CXX
 export DACE_compiler_cpu_openmp_sections=0
 export DACE_instrumentation_report_each_invocation=0

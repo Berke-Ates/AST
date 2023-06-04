@@ -67,7 +67,7 @@ RUN cmake -G Ninja .. \
 WORKDIR $HOME
 
 ################################################################################
-### Install LLVM/MLIR
+### Install LLVM/MLIR with MLIR-Smith
 ################################################################################
 
 # TODO: Build mlir-opt, mlir-translate, clang, clang++, llc
@@ -98,6 +98,7 @@ RUN cmake -G Ninja ../llvm \
   cp $HOME/llvm-project/build/bin/llc $HOME/bin && \
   cp $HOME/llvm-project/build/bin/mlir-opt $HOME/bin && \
   cp $HOME/llvm-project/build/bin/mlir-translate $HOME/bin && \
+  cp $HOME/llvm-project/build/bin/mlir-smith $HOME/bin && \
   rm -rf $HOME/llvm-project
 
 # Go home
@@ -125,11 +126,14 @@ ENV TERM=xterm-color
 RUN apt-get update -y && \ 
   apt-get install -y --no-install-recommends \
   wget=1.21.2-2ubuntu1  \
+  nano=6.2-1 \
+  less=590-1ubuntu0.22.04.1 \
   git=1:2.34.1-1ubuntu1.9 \
   cmake=3.22.1-1ubuntu1.22.04.1 \
   make=4.3-4.1build1 \
   ninja-build=1.10.1-1 \
-  clang-10=1:10.0.0-4ubuntu1 \
+  libomp-11-dev=1:11.1.0-6 \
+  clang-11=1:11.1.0-6 \
   gcc=4:11.2.0-1ubuntu1 \
   lld=1:14.0-55~exp2  \
   python3-pip=22.0.2+dfsg-1 \
