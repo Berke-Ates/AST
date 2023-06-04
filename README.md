@@ -62,8 +62,9 @@ sudo apt update && sudo apt install -y \
   make \
   cmake \
   ninja-build \
+  libomp-11-dev \
   clang \
-  clang-10 \
+  clang-11 \
   lld \
   gcc \
   python3 \
