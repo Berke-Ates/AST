@@ -16,6 +16,17 @@ registering new dialects.
 * Provides a variety of configuration options for controlling the complexity and
  scope of the generated code.
 
+## Docker Image
+We recommend pulling the docker image to use MLIR-Smith:
+```sh
+sudo docker pull berkeates/mlir-smith:latest
+```
+
+And run it:
+```sh
+sudo docker run -it --rm berkeates/mlir-smith
+```
+
 ## Getting Started
 To start using MLIR-Smith, follow these steps:
 
