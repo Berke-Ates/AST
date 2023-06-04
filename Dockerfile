@@ -13,9 +13,11 @@ WORKDIR $HOME
 RUN apt-get update -y && \ 
   apt-get install -y --no-install-recommends \
   wget=1.21.2-2ubuntu1 \
-  git=1:2.34.1-1ubuntu1.5 \
+  ca-certificates=20230311ubuntu0.22.04.1 \
+  git=1:2.34.1-1ubuntu1.9 \
   cmake=3.22.1-1ubuntu1.22.04.1 \
   ninja-build=1.10.1-1 \
+  python3=3.10.6-1~22.04 \
   clang=1:14.0-55~exp2 \
   lld=1:14.0-55~exp2 && \
   apt-get clean && \
@@ -27,7 +29,7 @@ RUN apt-get update -y && \
 
 # Make sure submodules are initialized
 # FIXME: Use depth 1
-RUN git clone https://github.com/spcl/mlir-dace.git
+RUN git clone https://github.com/spcl/mlir-dace
 WORKDIR $HOME/mlir-dace
 # FIXME: Use a tag instead
 RUN git checkout 8734d2c10ecb9078a81ff3ae0b64a774b098aca5
@@ -123,7 +125,7 @@ ENV TERM=xterm-color
 RUN apt-get update -y && \ 
   apt-get install -y --no-install-recommends \
   wget=1.21.2-2ubuntu1  \
-  git=1:2.34.1-1ubuntu1.5 \
+  git=1:2.34.1-1ubuntu1.9 \
   cmake=3.22.1-1ubuntu1.22.04.1 \
   make=4.3-4.1build1 \
   ninja-build=1.10.1-1 \
