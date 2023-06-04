@@ -170,8 +170,10 @@ mlir-opt --cse --canonicalize --symbol-dce --loop-invariant-code-motion \
 # Lower to LLVM dialect
 mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
   --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts \
-  "$mlir_dir"/"${input_name}"_opt.mlir \
-  >"$mlir_dir"/"${input_name}"_ll.mlir
+  "$mlir_dir"/"${input_name}"_opt.mlir |
+  mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
+    --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts \
+    >"$mlir_dir"/"${input_name}"_ll.mlir
 
 # Translate
 mlir-translate --mlir-to-llvmir "$mlir_dir"/"${input_name}"_ll.mlir \
