@@ -77,7 +77,7 @@ WORKDIR $HOME
 RUN git clone https://github.com/Berke-Ates/llvm-project.git
 WORKDIR $HOME/llvm-project
 # FIXME: Use a tag instead
-RUN git checkout be7e2d19da2a1ac57452690d9484f917d946cc78
+RUN git checkout f4dfabd4663c8d503ae927f9c85cf6aeb6413590
 
 # Build LLVM/MLIR
 WORKDIR $HOME/llvm-project/build
