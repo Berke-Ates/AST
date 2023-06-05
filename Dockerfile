@@ -70,8 +70,6 @@ WORKDIR $HOME
 ### Install LLVM/MLIR with MLIR-Smith
 ################################################################################
 
-# TODO: Build mlir-opt, mlir-translate, clang, clang++, llc
-
 # Get llvm-project
 # FIXME: Use depth 1
 RUN git clone https://github.com/Berke-Ates/llvm-project.git
