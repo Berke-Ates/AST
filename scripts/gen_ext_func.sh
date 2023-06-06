@@ -3,7 +3,9 @@
 # This script generates a C file, defining all external functions in a MLIR file
 
 # Be safe
-set -u # Disallow using undefined variables
+set -e          # Fail script when subcommand fails
+set -u          # Disallow using undefined variables
+set -o pipefail # Prevent errors from being masked
 
 # Check if at least two arguments are provided
 if [ $# -lt 2 ]; then

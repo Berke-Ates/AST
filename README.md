@@ -34,7 +34,7 @@ To start using MLIR-Smith, follow these steps:
 https://github.com/Berke-Ates/AST`
 2. Install the requirements by following the instructions in the 
 [Requirements](#requirements) section.
-3. Build the project by following the instructions in the [Building](#building) 
+3. Build the project by following the instructions in the [Building](#building)
 section.
 4. Run MLIR-Smith with the appropriate configuration options to generate random 
 MLIR code. 
