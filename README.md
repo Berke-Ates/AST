@@ -1,11 +1,11 @@
-# MLIRsmith: A Random MLIR Code Generator
+# MLIR-Smith: A Random MLIR Code Generator
 
-Welcome to MLIRsmith, a powerful tool designed to generate random MLIR 
+Welcome to MLIR-Smith, a powerful tool designed to generate random MLIR 
 (Multi-Level Intermediate Representation) code for a registered set of dialects. 
-MLIRsmith aims to simplify the process of testing and validating MLIR compilers, 
+MLIR-Smith aims to simplify the process of testing and validating MLIR compilers, 
 optimizers, and code transformations by providing a diverse set of MLIR test 
 cases. Inspired by the success of CSmith in generating random C programs, 
-MLIRsmith follows a similar approach to help detect and diagnose errors in the 
+MLIR-Smith follows a similar approach to help detect and diagnose errors in the 
 MLIR ecosystem.
 
 ## Features
@@ -16,23 +16,34 @@ registering new dialects.
 * Provides a variety of configuration options for controlling the complexity and
  scope of the generated code.
 
+## Docker Image
+We recommend pulling the docker image to use MLIR-Smith:
+```sh
+sudo docker pull berkeates/mlir-smith:latest
+```
+
+And run it:
+```sh
+sudo docker run -it --rm berkeates/mlir-smith
+```
+
 ## Getting Started
-To start using MLIRsmith, follow these steps:
+To start using MLIR-Smith, follow these steps:
 
 1. Clone the repository: `git clone --recurse-submodules --shallow-submodules 
 https://github.com/Berke-Ates/AST`
 2. Install the requirements by following the instructions in the 
 [Requirements](#requirements) section.
-3. Build the project by following the instructions in the [Building](#building) 
+3. Build the project by following the instructions in the [Building](#building)
 section.
-4. Run MLIRsmith with the appropriate configuration options to generate random 
+4. Run MLIR-Smith with the appropriate configuration options to generate random 
 MLIR code. 
 
-For more details on using MLIRsmith and its various options, please refer to the
+For more details on using MLIR-Smith and its various options, please refer to the
  [Usage](#usage) section.
 
 ## Requirements
-MLIRsmith relies on other projects that are incorporated as submodules. 
+MLIR-Smith relies on other projects that are incorporated as submodules. 
 To ensure a seamless experience, follow these steps for each project if you 
 haven't already installed them. First, make sure to obtain the submodules on 
 your local machine by executing the command:
@@ -41,6 +52,25 @@ git submodule update --init --recursive
 ```
 This will initialize and update all necessary submodules and their nested 
 submodules in a single step.
+
+To build and use the submodules you will need the following packages:
+```sh
+sudo apt update && sudo apt install -y \
+  wget \
+  git \
+  gpg \
+  make \
+  cmake \
+  ninja-build \
+  libomp-11-dev \
+  clang \
+  clang-11 \
+  lld \
+  gcc \
+  python3 \
+  python3-pip \
+  python3-dev 
+```
 
 ### DaCe (Optional)
 Install DaCe with the following commands:
@@ -91,7 +121,7 @@ Note: Replace `<Path to llvm-project>` by the absolute path to the
 project.
 
 ## Building
-Please follow these steps to build MLIRsmith:
+Please follow these steps to build MLIR-Smith:
 
 ```sh
 cd llvm-project
@@ -114,7 +144,7 @@ Note: Depending on your machine this may take a while.
 
 ## Usage
 
-Once MLIRsmith is built, you can run it with the following command:
+Once MLIR-Smith is built, you can run it with the following command:
 ```sh
 ./mlir-smith [options]
 ```
@@ -129,7 +159,7 @@ The available options include:
 
 ## File Structure
 This project is organized into several directories, each containing specific 
-components of the MLIRsmith tool. Below is an overview of the file structure, 
+components of the MLIR-Smith tool. Below is an overview of the file structure, 
 detailing the contents and purpose of each directory:
 
 * `llvm-project`: This directory contains a submodule of the LLVM Project, 
@@ -143,14 +173,10 @@ transformations.
 responsible for bridging the gap between the MLIR and DaCe frameworks, ensuring 
 seamless interaction between the two.
 * `scripts`: The scripts folder provides various utility scripts to assist in 
-building, testing, and working with MLIRsmith. These scripts automate common 
+building, testing, and working with MLIR-Smith. These scripts automate common 
 tasks, making it easier for users to interact with the tool and manage the 
 generated code.
 
-The main source files for MLIRsmith are located at the root level of the 
-project. These files implement the core functionality of the tool, including the
- generation of random MLIR code and the registration and management of dialects.
-
 ## License
-MLIRsmith is licensed under the [BSD-3-Clause license](LICENSE).
+MLIR-Smith is licensed under the [BSD-3-Clause license](LICENSE).
 

@@ -1,0 +1,27 @@
+{
+    "./out/smith_2/dcir/input.mlir": {
+        "62": [
+            {
+                "sdfg_id": 0,
+                "state_id": 0,
+                "node_id": 0
+            }
+        ],
+        "85": [
+            {
+                "sdfg_id": 0,
+                "state_id": 0,
+                "node_id": 1
+            }
+        ]
+    },
+    "/home/xdb/AST/dace/dace/transformation/passes/scalar_to_symbol.py": {
+        "531": [
+            {
+                "sdfg_id": 0,
+                "state_id": 0,
+                "node_id": 2
+            }
+        ]
+    }
+}

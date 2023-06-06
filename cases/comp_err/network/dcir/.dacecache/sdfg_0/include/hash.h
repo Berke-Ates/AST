@@ -1,0 +1,1 @@
+#define __HASH_sdfg_0 "0c4e5c8e319d91c647eb052ebf5c3d752062e7f814fe3910ae33be5fb84ce04a"

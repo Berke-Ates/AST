@@ -7,7 +7,7 @@ set -u # Disallow using undefined variables
 
 # Check args
 if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-  echo "Usage: ./smith.sh <Path to mlir-smith> <Output Dir> [<Config File>]"
+  echo "Usage: $0 <Path to mlir-smith> <Output Dir> [<Config File>]"
   exit 1
 fi
 
@@ -51,15 +51,7 @@ for ((i = 0; i <= 10; i++)); do
   subdir="$output_dir"/smith_$i
   mkdir -p "$subdir"
   mlir_file="$subdir"/input.mlir
-
-  # Generate an MLIR file using mlir-smith until it contains 'func private'
-  # (external call)
-  while true; do
-    $mlir_smith -o "$mlir_file" -c "$config_file"
-    if grep -q 'func private' "$mlir_file"; then
-      break
-    fi
-  done
+  $mlir_smith -o "$mlir_file" -c "$config_file"
 
   # Generate binaries
   if ! "$scripts_dir"/pipeline.sh "$mlir_file" "$subdir"; then
@@ -78,7 +70,7 @@ for ((i = 0; i <= 10; i++)); do
     # Change to the binary's directory
     pushd "$(dirname "$binary")" >/dev/null || exit 1
 
-    timeout 10s ./input.out &>out.txt
+    LD_LIBRARY_PATH=. timeout 10s ./input.out &>out.txt
     echo "Exit status: $?" >>out.txt
 
     # Read the output and exit status from out.txt

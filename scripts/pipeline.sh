@@ -11,7 +11,7 @@ set -o pipefail # Prevent errors from being masked
 
 # Check args
 if [ $# -ne 2 ]; then
-  echo "Usage: ./pipeline.sh <MLIR File> <Output Dir>"
+  echo "Usage: $0 <MLIR File> <Output Dir>"
   exit 1
 fi
 
@@ -47,13 +47,14 @@ check_tool() {
 
 check_tool clang
 check_tool clang++
-check_tool clang-10   # libomp compatible version
-check_tool clang++-10 # libomp compatible version
+check_tool clang-11   # libomp compatible version
+check_tool clang++-11 # libomp compatible version
 check_tool mlir-opt
 check_tool mlir-translate
 check_tool sdfg-opt
 check_tool sdfg-translate
 check_tool python3
+check_tool opt
 check_tool llc
 
 add_log_section "Submodule Commits"
@@ -106,11 +107,11 @@ opt_lvl_dc="3"   # Optimization level for the data-centric optimizations (no -O)
 } >>"$log_file"
 
 # Dace Settings
-DACE_compiler_cpu_executable="$(which clang++-10)"
+DACE_compiler_cpu_executable="$(which clang++-11)"
 export DACE_compiler_cpu_executable
-CC=$(which clang-10)
+CC=$(which clang-11)
 export CC
-CXX=$(which clang++-10)
+CXX=$(which clang++-11)
 export CXX
 export DACE_compiler_cpu_openmp_sections=0
 export DACE_instrumentation_report_each_invocation=0
@@ -169,20 +170,21 @@ mlir-opt --cse --canonicalize --symbol-dce --loop-invariant-code-motion \
 # Lower to LLVM dialect
 mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
   --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts \
-  "$mlir_dir"/"${input_name}"_opt.mlir \
-  >"$mlir_dir"/"${input_name}"_ll.mlir
+  "$mlir_dir"/"${input_name}"_opt.mlir |
+  mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
+    --convert-math-to-llvm --lower-host-to-llvm --reconcile-unrealized-casts \
+    >"$mlir_dir"/"${input_name}"_ll.mlir
 
 # Translate
 mlir-translate --mlir-to-llvmir "$mlir_dir"/"${input_name}"_ll.mlir \
   >"$mlir_dir"/"${input_name}".ll
 
-# Compile
-llc -O0 --relocation-model=pic "$mlir_dir"/"${input_name}".ll \
-  -o "$mlir_dir"/"${input_name}".s
+# Generate assembly
+llc -O0 "$mlir_dir"/"${input_name}".ll -o "$mlir_dir"/"${input_name}".s
 
-# Assemble
+# Compile & Assemble
 # shellcheck disable=SC2086
-clang -O0 $flags "$funcs_lib" "$mlir_dir"/"${input_name}".s \
+clang -O0 $flags "$funcs_lib" "$mlir_dir"/"${input_name}".ll \
   -o "$mlir_dir"/"${input_name}".out -lm
 
 set +x
@@ -212,13 +214,16 @@ mlir-opt --convert-scf-to-cf --convert-func-to-llvm --convert-cf-to-llvm \
 mlir-translate --mlir-to-llvmir "$llvm_dir"/"${input_name}"_ll.mlir \
   >"$llvm_dir"/"${input_name}".ll
 
-# Compile
-llc $opt_lvl_cc --relocation-model=pic "$llvm_dir"/"${input_name}".ll \
-  -o "$llvm_dir"/"${input_name}".s
+# Optimize
+opt $opt_lvl_cc -S "$llvm_dir"/"${input_name}".ll \
+  >"$llvm_dir"/"${input_name}"_opt.ll
 
-# Assemble
+# Generate assembly
+llc -O0 "$llvm_dir"/"${input_name}"_opt.ll -o "$llvm_dir"/"${input_name}".s
+
+# Compile & Assemble
 # shellcheck disable=SC2086
-clang -O0 $flags "$funcs_lib" "$llvm_dir"/"${input_name}".s \
+clang -O0 $flags "$funcs_lib" "$llvm_dir"/"${input_name}"_opt.ll \
   -o "$llvm_dir"/"${input_name}".out -lm
 
 set +x

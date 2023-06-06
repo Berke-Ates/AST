@@ -1,0 +1,2 @@
+external_dce_flag_1
+Exit status: 0
